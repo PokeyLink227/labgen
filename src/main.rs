@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::fs::File;
 use std::io::BufWriter;
-use rand::random;
+use rand;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct Vector2I {
@@ -13,6 +13,15 @@ struct Vector2I {
 struct Vector2U {
     x: u32,
     y: u32,
+}
+
+impl Vector2U {
+    fn add_offset(&mut self, other: Vector2I) {
+        *self = Vector2U {
+            x: ((self.x as i32) + other.x) as u32,
+            y: ((self.y as i32) + other.y) as u32,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -71,15 +80,10 @@ impl Grid {
         self.tiles[(pos.x + pos.y * self.width) as usize]
     }
 
-    /*
-    fn in_bounds(&self, x: u32, y: u32) -> bool {
-        x >= 0 && x < self.width && y >= 0 && y < self.height
+    fn set_tile(&mut self, pos: Vector2U, new: Tile) {
+        self.tiles[(pos.x + pos.y * self.width) as usize] = new;
     }
-    */
 
-    fn in_bounds(&self, pos: Vector2U) -> bool {
-        pos.x < self.width && pos.y < self.height
-    }
 }
 
 fn get_unvisited_adj(maze: &Grid, pos: Vector2U) -> Option<usize> {
@@ -99,28 +103,48 @@ fn get_unvisited_adj(maze: &Grid, pos: Vector2U) -> Option<usize> {
 
 fn create_maze_backtrack(width: u32, height: u32) -> Grid {
     let blank: Tile = Tile {status: ConnectionStatus::UnVisited, connections: [false, false, false, false]};
+    let num_tiles = width * height;
+    let directions = [
+    Vector2I {x:  0, y: -1},
+    Vector2I {x:  1, y:  0},
+    Vector2I {x:  0, y:  1},
+    Vector2I {x: -1, y:  0},
+    ];
+
     let mut maze: Grid = Grid {
-        tiles: vec![blank; (width * height) as usize],
+        tiles: vec![blank; (num_tiles) as usize],
         width: width,
         height: height,
     };
-
     let mut stack: Vec<Vector2U> = Vec::new();
-    let num_tiles = width * height;
-    let mut num_visited = 1;
-    stack.push(Vector2U {x: 0, y: 0});
+    let mut num_visited = 0;
+    let mut current_pos: Vector2U = Vector2U {x: 0, y: 0};
+    let mut current_tile: Tile = maze.get_tile(current_pos);
 
     while num_visited < num_tiles {
-        let current_tile = stack.last().unwrap();
-        match get_unvisited_adj(&maze, *current_tile) {
-            None       => _ = stack.pop(),
-            Some(next) => {
+        if current_tile.status == ConnectionStatus::UnVisited {
+            current_tile.status = ConnectionStatus::InMaze;
+            maze.set_tile(current_pos, current_tile);
 
-                num_visited += 1;
-            },
+            stack.push(current_pos);
+            num_visited += 1;
         }
 
+        match get_unvisited_adj(&maze, current_pos) {
+            None       => {
+                current_pos = stack.pop().unwrap();
+                current_tile = maze.get_tile(current_pos);
+            },
+            Some(next) => {
+                current_tile.connections[next] = true;
+                maze.set_tile(current_pos, current_tile);
 
+                current_pos.add_offset(directions[next]);
+                current_tile = maze.get_tile(current_pos);
+                current_tile.connections[(next + 2) % 4] = true;
+                maze.set_tile(current_pos, current_tile);
+            },
+        }
     }
 
     maze
@@ -165,4 +189,6 @@ fn main() {
 
     let pix = create_maze_backtrack(3, 3);
     generate_image(&pix);
+
+    println!("Successfully Generated Maze");
 }
