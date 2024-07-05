@@ -141,7 +141,7 @@ fn create_maze_backtrack(width: u32, height: u32) -> Grid {
 
                 current_pos.add_offset(directions[next]);
                 current_tile = maze.get_tile(current_pos);
-                current_tile.connections[(next + 2) % 4] = true;
+                current_tile.connections[(next + 2) % 4] = true; /* add connection in opposite direction on next tile */
                 maze.set_tile(current_pos, current_tile);
             },
         }
