@@ -2,6 +2,7 @@ use std::path::Path;
 use std::fs::File;
 use std::io::BufWriter;
 use rand;
+use rand::{thread_rng, Rng};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct Vector2I {
@@ -13,6 +14,12 @@ struct Vector2I {
 struct Vector2U {
     x: u32,
     y: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct Vector2F {
+    x: f32,
+    y: f32,
 }
 
 impl Vector2U {
@@ -182,7 +189,76 @@ fn generate_image(maze: &Grid) {
     writer.write_image_data(&ColorRGB::as_bytes(&pixels)).unwrap();
 }
 
+fn normalize(v: Vector2F) -> Vector2F {
+    let len = (v.x * v.x + v.y * v.y).sqrt();
+    Vector2F {x: v.x / len, y: v.y / len}
+}
+
+fn get_color(val: f32) -> ColorRGB {
+    ColorRGB {
+        red: ((255 as f32) * (val + 1.0) / 2.0) as u8,
+        green: ((255 as f32) * (val + 1.0) / 2.0) as u8,
+        blue: ((255 as f32) * (val + 1.0) / 2.0) as u8,
+    }
+}
+
+fn generate_noise() {
+    let width: usize = 100;
+    let height: usize = 100;
+    let cell_width: usize = 10;
+    let grid_width: usize = 11;
+    let grid_height: usize = 11;
+
+    let mut rng = thread_rng();
+
+    let mut points: Vec<f32> = vec![0.0f32; width * height];
+    let mut grid: Vec<Vector2F> = Vec::with_capacity(grid_width * grid_height);
+
+    for i in 0..(grid_width * grid_height) {
+        grid.push(normalize(Vector2F {x: rng.gen_range(-1.0..=1.0), y: rng.gen_range(-1.0..=1.0)}));
+    }
+
+    for y in 0..height {
+        for x in 0..width {
+            let gx: uszie = x % cell_width;
+            let gy: uszie = y % cell_width;
+
+            let gvec =
+                if gx < 5 && gy < 5 {grid[gx + gy * grid_width]}
+                else if gx < 5 && gy >= 5 {grid[gx + (gy + 1) * grid_width]}
+                else if gx >= 5 && gy < 5 {grid[(gx + 1) + gy * grid_width]}
+                else {grid[(gx + 1) + (gy + 1) * grid_width]}
+                ;
+
+            points[x + y * width] =
+
+        }
+    }
+
+
+
+    let path = Path::new(r"./noise.png");
+    let file = File::create(path).unwrap();
+    let ref mut w = BufWriter::new(file);
+
+    let mut encoder = png::Encoder::new(w, width as u32, height as u32);
+    encoder.set_color(png::ColorType::Rgb);
+
+    let mut writer = encoder.write_header().unwrap();
+
+    let mut pixels: Vec<ColorRGB> = vec![ColorRGB {red: 0, green: 0, blue: 0}; width * height];
+
+    for i in 0..(width * height) {
+        pixels[i] = get_color(points[i]);
+    }
+
+    writer.write_image_data(&ColorRGB::as_bytes(&pixels)).unwrap();
+}
+
 fn main() {
+
+    generate_noise();
+    return;
 
 
 
