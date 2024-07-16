@@ -114,11 +114,9 @@ fn get_unvisited_adj(maze: &Grid, pos: Vector2U) -> Option<usize> {
     }
 }
 
-fn create_maze_backtrack(maze_size: Vector2<usize>) -> Grid {
-    let width: u32 = maze_size.x as u32;
-    let height: u32 = maze_size.y as u32;
+fn create_maze_backtrack(maze_size: Vector2<u32>) -> Grid {
     let blank: Tile = Tile {status: ConnectionStatus::UnVisited, connections: [false, false, false, false]};
-    let num_tiles = width * height;
+    let num_tiles = maze_size.x * maze_size.y;
     let directions = [
     Vector2I {x:  0, y: -1},
     Vector2I {x:  1, y:  0},
@@ -128,8 +126,8 @@ fn create_maze_backtrack(maze_size: Vector2<usize>) -> Grid {
 
     let mut maze: Grid = Grid {
         tiles: vec![blank; (num_tiles) as usize],
-        width: width,
-        height: height,
+        width: maze_size.x,
+        height: maze_size.y,
     };
     let mut stack: Vec<Vector2U> = Vec::new();
     let mut num_visited = 0;
@@ -165,6 +163,36 @@ fn create_maze_backtrack(maze_size: Vector2<usize>) -> Grid {
     maze
 }
 
+fn create_maze_prim(maze_size: Vector2<u32>) -> Grid {
+    let num_tiles = maze_size.x * maze_size.y;
+    let blank = Tile {status: ConnectionStatus::UnVisited, connections: [false, false, false, false]};
+    let directions = [
+        Vector2 {x:  0, y: -1},
+        Vector2 {x:  1, y:  0},
+        Vector2 {x:  0, y:  1},
+        Vector2 {x: -1, y:  0},
+    ];
+    let num_visited = 0;
+    let weights = generate_noise(maze_size, Vector2 {x: 10, y: 10});
+
+    let mut maze: Grid = Grid {
+        tiles: vec![blank; num_tiles as usize],
+        width: maze_size.x,
+        height: maze_size.y,
+    };
+    let mut edges: Vec<(Vector2<u32>, Vector2<u32>)> = Vec::with_capacity((num_tiles * 2) as usize);
+    let mut pos = Vector2 {x: 0, y: 0};
+
+    /*
+    while num_visited < num_tiles {
+        if let ConnectionStatus::UnVisited == maze.get_tile(pos).status {
+
+        }
+    }
+    */
+
+    maze
+}
 
 fn generate_image(maze: &Grid) {
     let cell_width = 2;
@@ -216,9 +244,9 @@ fn interpolate(a: f32, b: f32, s: f32) -> f32 {
     a + (b - a) * ((s * (s * 6.0 - 15.0) + 10.0) * s * s * s)
 }
 
-fn generate_noise(world_size: Vector2<usize>, grid_size: Vector2<usize>) -> Vec<f32> {
+fn generate_noise(world_size: Vector2<u32>, grid_size: Vector2<u32>) -> Vec<f32> {
     // can over-estimate length and be fine
-    let cell_size: Vector2<usize> = Vector2 {
+    let cell_size: Vector2<u32> = Vector2 {
         x: if world_size.x % (grid_size.x - 1) == 0 { world_size.x / (grid_size.x - 1) }
         else { world_size.x / (grid_size.x - 1) + 1 },
         y: if world_size.y % (grid_size.y - 1) == 0 { world_size.y / (grid_size.y - 1) }
@@ -226,8 +254,8 @@ fn generate_noise(world_size: Vector2<usize>, grid_size: Vector2<usize>) -> Vec<
     };
 
     let mut rng = thread_rng();
-    let mut points: Vec<f32> = vec![0.0f32; world_size.x * world_size.y];
-    let mut grid: Vec<Vector2<f32>> = Vec::with_capacity(grid_size.x * grid_size.y);
+    let mut points: Vec<f32> = vec![0.0f32; (world_size.x * world_size.y) as usize];
+    let mut grid: Vec<Vector2<f32>> = Vec::with_capacity((grid_size.x * grid_size.y) as usize);
 
     // fill grid with random direction vectors
     for _ in 0..(grid_size.x * grid_size.y) {
@@ -250,10 +278,10 @@ fn generate_noise(world_size: Vector2<usize>, grid_size: Vector2<usize>) -> Vec<
 
             // dot product of each offset vector and its respective direction vector
             let dots: [f32; 4] = [
-                Vector2::dot(grid[(grid_pos.x + 0) + (grid_pos.y + 0) * grid_size.x], offset_vectors[0]),
-                Vector2::dot(grid[(grid_pos.x + 1) + (grid_pos.y + 0) * grid_size.x], offset_vectors[1]),
-                Vector2::dot(grid[(grid_pos.x + 0) + (grid_pos.y + 1) * grid_size.x], offset_vectors[2]),
-                Vector2::dot(grid[(grid_pos.x + 1) + (grid_pos.y + 1) * grid_size.x], offset_vectors[3]),
+                Vector2::dot(grid[((grid_pos.x + 0) + (grid_pos.y + 0) * grid_size.x) as usize], offset_vectors[0]),
+                Vector2::dot(grid[((grid_pos.x + 1) + (grid_pos.y + 0) * grid_size.x) as usize], offset_vectors[1]),
+                Vector2::dot(grid[((grid_pos.x + 0) + (grid_pos.y + 1) * grid_size.x) as usize], offset_vectors[2]),
+                Vector2::dot(grid[((grid_pos.x + 1) + (grid_pos.y + 1) * grid_size.x) as usize], offset_vectors[3]),
             ];
 
             // calculate step for interpolation
@@ -268,7 +296,7 @@ fn generate_noise(world_size: Vector2<usize>, grid_size: Vector2<usize>) -> Vec<
             let int_y = interpolate(int_x1, int_x2, step.y);
 
             // dot product will range from -cell_width to cell_width
-            points[x + y * world_size.x] = int_y / (cell_size.x as f32) * 1.5;
+            points[(x + y * world_size.x) as usize] = int_y / (cell_size.x as f32) * 1.5;
         }
     }
 
@@ -282,9 +310,9 @@ fn generate_noise(world_size: Vector2<usize>, grid_size: Vector2<usize>) -> Vec<
 
     let mut writer = encoder.write_header().unwrap();
 
-    let mut pixels: Vec<ColorRGB> = vec![ColorRGB {red: 0, green: 0, blue: 0}; world_size.x * world_size.y];
+    let mut pixels: Vec<ColorRGB> = vec![ColorRGB {red: 0, green: 0, blue: 0}; (world_size.x * world_size.y) as usize];
 
-    for i in 0..(world_size.x * world_size.y) {
+    for i in 0..(world_size.x * world_size.y) as usize {
         pixels[i] = get_color(points[i]);
     }
 
@@ -296,7 +324,6 @@ fn generate_noise(world_size: Vector2<usize>, grid_size: Vector2<usize>) -> Vec<
 
 fn main() {
     let maze_size = Vector2 {x: 100, y: 100};
-    generate_noise(maze_size, Vector2 {x: 7, y: 7});
     let nodes = create_maze_backtrack(maze_size);
     generate_image(&nodes);
 
