@@ -114,7 +114,9 @@ fn get_unvisited_adj(maze: &Grid, pos: Vector2U) -> Option<usize> {
     }
 }
 
-fn create_maze_backtrack(width: u32, height: u32) -> Grid {
+fn create_maze_backtrack(maze_size: Vector2<usize>) -> Grid {
+    let width: u32 = maze_size.x as u32;
+    let height: u32 = maze_size.y as u32;
     let blank: Tile = Tile {status: ConnectionStatus::UnVisited, connections: [false, false, false, false]};
     let num_tiles = width * height;
     let directions = [
@@ -214,36 +216,39 @@ fn interpolate(a: f32, b: f32, s: f32) -> f32 {
     a + (b - a) * ((s * (s * 6.0 - 15.0) + 10.0) * s * s * s)
 }
 
-fn generate_noise() -> Vec<f32> {
-    let world_size: Vector2<usize> = Vector2 {x: 600, y: 600};
-    let grid_size: Vector2<usize> = Vector2 {x: 4, y: 4};
+fn generate_noise(world_size: Vector2<usize>, grid_size: Vector2<usize>) -> Vec<f32> {
+    // can over-estimate length and be fine
     let cell_size: Vector2<usize> = Vector2 {
         x: if world_size.x % (grid_size.x - 1) == 0 { world_size.x / (grid_size.x - 1) }
         else { world_size.x / (grid_size.x - 1) + 1 },
         y: if world_size.y % (grid_size.y - 1) == 0 { world_size.y / (grid_size.y - 1) }
         else { world_size.y / (grid_size.y - 1) + 1 },
-    }; /* can over-estimate length and be fine */
+    };
 
     let mut rng = thread_rng();
     let mut points: Vec<f32> = vec![0.0f32; world_size.x * world_size.y];
     let mut grid: Vec<Vector2<f32>> = Vec::with_capacity(grid_size.x * grid_size.y);
 
+    // fill grid with random direction vectors
     for _ in 0..(grid_size.x * grid_size.y) {
         grid.push(normalize(Vector2 {x: rng.gen_range(-1.0..=1.0), y: rng.gen_range(-1.0..=1.0)}));
     }
 
+    // calculate perlin noise for each point in the world
     for y in 0..world_size.y {
         for x in 0..world_size.x {
             let grid_offset = Vector2 {x: x % cell_size.x, y: y % cell_size.y};
             let grid_pos = Vector2 {x: x / cell_size.x, y: y / cell_size.y};
 
+            // offset vectors from each nearby grid point to current world point
             let offset_vectors: [Vector2<f32>; 4] = [
-                Vector2 {x:  ((grid_offset.x) as f32),              y:  ((grid_offset.y) as f32)},
+                Vector2 {x:  ((grid_offset.x) as f32),               y:  ((grid_offset.y) as f32)},
                 Vector2 {x: -((cell_size.x - grid_offset.x) as f32), y:  ((grid_offset.y) as f32)},
-                Vector2 {x:  ((grid_offset.x) as f32),              y: -((cell_size.y - grid_offset.y) as f32)},
+                Vector2 {x:  ((grid_offset.x) as f32),               y: -((cell_size.y - grid_offset.y) as f32)},
                 Vector2 {x: -((cell_size.x - grid_offset.x) as f32), y: -((cell_size.y - grid_offset.y) as f32)},
             ];
 
+            // dot product of each offset vector and its respective direction vector
             let dots: [f32; 4] = [
                 Vector2::dot(grid[(grid_pos.x + 0) + (grid_pos.y + 0) * grid_size.x], offset_vectors[0]),
                 Vector2::dot(grid[(grid_pos.x + 1) + (grid_pos.y + 0) * grid_size.x], offset_vectors[1]),
@@ -251,11 +256,13 @@ fn generate_noise() -> Vec<f32> {
                 Vector2::dot(grid[(grid_pos.x + 1) + (grid_pos.y + 1) * grid_size.x], offset_vectors[3]),
             ];
 
+            // calculate step for interpolation
             let step = Vector2 {
                 x: (grid_offset.x as f32) / (cell_size.x as f32),
                 y: (grid_offset.y as f32) / (cell_size.y as f32),
             };
 
+            // interpolate over x and y direction
             let int_x1 = interpolate(dots[0], dots[1], step.x);
             let int_x2 = interpolate(dots[2], dots[3], step.x);
             let int_y = interpolate(int_x1, int_x2, step.y);
@@ -264,6 +271,7 @@ fn generate_noise() -> Vec<f32> {
             points[x + y * world_size.x] = int_y / (cell_size.x as f32) * 1.5;
         }
     }
+
 
     let path = Path::new(r"./noise.png");
     let file = File::create(path).unwrap();
@@ -282,19 +290,15 @@ fn generate_noise() -> Vec<f32> {
 
     writer.write_image_data(&ColorRGB::as_bytes(&pixels)).unwrap();
 
+
     points
 }
 
 fn main() {
-
-    generate_noise();
-    return;
-
-
-
-
-    let pix = create_maze_backtrack(3, 3);
-    generate_image(&pix);
+    let maze_size = Vector2 {x: 100, y: 100};
+    generate_noise(maze_size, Vector2 {x: 7, y: 7});
+    let nodes = create_maze_backtrack(maze_size);
+    generate_image(&nodes);
 
     println!("Successfully Generated Maze");
 }
