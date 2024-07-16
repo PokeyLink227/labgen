@@ -26,13 +26,13 @@ impl Vector2U {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-struct Vector2F {
-    x: f32,
-    y: f32,
+struct Vector2<T> {
+    x: T,
+    y: T,
 }
 
-impl Vector2F {
-    fn dot(lhs: Vector2F, rhs: Vector2F) -> f32 {
+impl Vector2<f32> {
+    fn dot(lhs: Vector2<f32>, rhs: Vector2<f32>) -> f32 {
         lhs.x * rhs.x + lhs.y * rhs.y
     }
 }
@@ -195,9 +195,9 @@ fn generate_image(maze: &Grid) {
     writer.write_image_data(&ColorRGB::as_bytes(&pixels)).unwrap();
 }
 
-fn normalize(v: Vector2F) -> Vector2F {
+fn normalize(v: Vector2<f32>) -> Vector2<f32> {
     let len = (v.x * v.x + v.y * v.y).sqrt();
-    Vector2F {x: v.x / len, y: v.y / len}
+    Vector2 {x: v.x / len, y: v.y / len}
 }
 
 fn get_color(val: f32) -> ColorRGB {
@@ -210,58 +210,58 @@ fn get_color(val: f32) -> ColorRGB {
 
 fn interpolate(a: f32, b: f32, s: f32) -> f32 {
     // a + (b - a) * s
-    a + (b - a) * s * s * (3.0 - s * 2.0)
-    // a + (b - a) * ((s * (s * 6.0 - 15.0) + 10.0) * s * s * s)
+    // a + (b - a) * s * s * (3.0 - s * 2.0)
+    a + (b - a) * ((s * (s * 6.0 - 15.0) + 10.0) * s * s * s)
 }
 
-fn generate_noise() {
-    let width: usize = 100;
-    let height: usize = 100;
-    let grid_width: usize = 11;
-    let grid_height: usize = 11;
-    let cell_width: usize = 10;
+fn generate_noise() -> Vec<f32> {
+    let world_size: Vector2<usize> = Vector2 {x: 600, y: 600};
+    let grid_size: Vector2<usize> = Vector2 {x: 4, y: 4};
+    let cell_size: Vector2<usize> = Vector2 {
+        x: if world_size.x % (grid_size.x - 1) == 0 { world_size.x / (grid_size.x - 1) }
+        else { world_size.x / (grid_size.x - 1) + 1 },
+        y: if world_size.y % (grid_size.y - 1) == 0 { world_size.y / (grid_size.y - 1) }
+        else { world_size.y / (grid_size.y - 1) + 1 },
+    }; /* can over-estimate length and be fine */
 
     let mut rng = thread_rng();
+    let mut points: Vec<f32> = vec![0.0f32; world_size.x * world_size.y];
+    let mut grid: Vec<Vector2<f32>> = Vec::with_capacity(grid_size.x * grid_size.y);
 
-    let mut points: Vec<f32> = vec![0.0f32; width * height];
-    let mut grid: Vec<Vector2F> = Vec::with_capacity(grid_width * grid_height);
-
-    for i in 0..(grid_width * grid_height) {
-        grid.push(normalize(Vector2F {x: rng.gen_range(-1.0..=1.0), y: rng.gen_range(-1.0..=1.0)}));
+    for _ in 0..(grid_size.x * grid_size.y) {
+        grid.push(normalize(Vector2 {x: rng.gen_range(-1.0..=1.0), y: rng.gen_range(-1.0..=1.0)}));
     }
 
-    for y in 0..height {
-        for x in 0..width {
-            let gox: usize = x % cell_width; /* grid offset x */
-            let goy: usize = y % cell_width; /* grid offset y */
-            let gx: usize = x / cell_width;
-            let gy: usize = y / cell_width;
+    for y in 0..world_size.y {
+        for x in 0..world_size.x {
+            let grid_offset = Vector2 {x: x % cell_size.x, y: y % cell_size.y};
+            let grid_pos = Vector2 {x: x / cell_size.x, y: y / cell_size.y};
 
-            let offset_vectors: [Vector2F; 4] = [
-                Vector2F {x:  ((gox) as f32),              y:  ((goy) as f32)},
-                Vector2F {x: -((cell_width - gox) as f32), y:  ((goy) as f32)},
-                Vector2F {x:  ((gox) as f32),              y: -((cell_width - goy) as f32)},
-                Vector2F {x: -((cell_width - gox) as f32), y: -((cell_width - goy) as f32)},
+            let offset_vectors: [Vector2<f32>; 4] = [
+                Vector2 {x:  ((grid_offset.x) as f32),              y:  ((grid_offset.y) as f32)},
+                Vector2 {x: -((cell_size.x - grid_offset.x) as f32), y:  ((grid_offset.y) as f32)},
+                Vector2 {x:  ((grid_offset.x) as f32),              y: -((cell_size.y - grid_offset.y) as f32)},
+                Vector2 {x: -((cell_size.x - grid_offset.x) as f32), y: -((cell_size.y - grid_offset.y) as f32)},
             ];
 
             let dots: [f32; 4] = [
-                Vector2F::dot(grid[(gx + 0) + (gy + 0) * grid_width], offset_vectors[0]),
-                Vector2F::dot(grid[(gx + 1) + (gy + 0) * grid_width], offset_vectors[1]),
-                Vector2F::dot(grid[(gx + 0) + (gy + 1) * grid_width], offset_vectors[2]),
-                Vector2F::dot(grid[(gx + 1) + (gy + 1) * grid_width], offset_vectors[3]),
+                Vector2::dot(grid[(grid_pos.x + 0) + (grid_pos.y + 0) * grid_size.x], offset_vectors[0]),
+                Vector2::dot(grid[(grid_pos.x + 1) + (grid_pos.y + 0) * grid_size.x], offset_vectors[1]),
+                Vector2::dot(grid[(grid_pos.x + 0) + (grid_pos.y + 1) * grid_size.x], offset_vectors[2]),
+                Vector2::dot(grid[(grid_pos.x + 1) + (grid_pos.y + 1) * grid_size.x], offset_vectors[3]),
             ];
 
-            let sx = (gox as f32) / (cell_width as f32);
-            let sy = (goy as f32) / (cell_width as f32);
+            let step = Vector2 {
+                x: (grid_offset.x as f32) / (cell_size.x as f32),
+                y: (grid_offset.y as f32) / (cell_size.y as f32),
+            };
 
-            let int_x1 = interpolate(dots[0], dots[1], sx);
-            let int_x2 = interpolate(dots[2], dots[3], sx);
-            let int_y = interpolate(int_x1, int_x2, sy);
+            let int_x1 = interpolate(dots[0], dots[1], step.x);
+            let int_x2 = interpolate(dots[2], dots[3], step.x);
+            let int_y = interpolate(int_x1, int_x2, step.y);
 
-            //println!("{:?}", int_y / (cell_width / 2) as f32);
             // dot product will range from -cell_width to cell_width
-            points[x + y * width] = int_y / (cell_width as f32) * 1.5;
-
+            points[x + y * world_size.x] = int_y / (cell_size.x as f32) * 1.5;
         }
     }
 
@@ -269,18 +269,20 @@ fn generate_noise() {
     let file = File::create(path).unwrap();
     let ref mut w = BufWriter::new(file);
 
-    let mut encoder = png::Encoder::new(w, width as u32, height as u32);
+    let mut encoder = png::Encoder::new(w, world_size.x as u32, world_size.y as u32);
     encoder.set_color(png::ColorType::Rgb);
 
     let mut writer = encoder.write_header().unwrap();
 
-    let mut pixels: Vec<ColorRGB> = vec![ColorRGB {red: 0, green: 0, blue: 0}; width * height];
+    let mut pixels: Vec<ColorRGB> = vec![ColorRGB {red: 0, green: 0, blue: 0}; world_size.x * world_size.y];
 
-    for i in 0..(width * height) {
+    for i in 0..(world_size.x * world_size.y) {
         pixels[i] = get_color(points[i]);
     }
 
     writer.write_image_data(&ColorRGB::as_bytes(&pixels)).unwrap();
+
+    points
 }
 
 fn main() {
