@@ -16,18 +16,24 @@ struct Vector2U {
     y: u32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-struct Vector2F {
-    x: f32,
-    y: f32,
-}
-
 impl Vector2U {
     fn add_offset(&mut self, other: Vector2I) {
         *self = Vector2U {
             x: ((self.x as i32) + other.x) as u32,
             y: ((self.y as i32) + other.y) as u32,
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct Vector2F {
+    x: f32,
+    y: f32,
+}
+
+impl Vector2F {
+    fn dot(lhs: Vector2F, rhs: Vector2F) -> f32 {
+        lhs.x * rhs.x + lhs.y * rhs.y
     }
 }
 
@@ -202,12 +208,18 @@ fn get_color(val: f32) -> ColorRGB {
     }
 }
 
+fn interpolate(a: f32, b: f32, s: f32) -> f32 {
+    // a + (b - a) * s
+    a + (b - a) * s * s * (3.0 - s * 2.0)
+    // a + (b - a) * ((s * (s * 6.0 - 15.0) + 10.0) * s * s * s)
+}
+
 fn generate_noise() {
     let width: usize = 100;
     let height: usize = 100;
-    let cell_width: usize = 10;
     let grid_width: usize = 11;
     let grid_height: usize = 11;
+    let cell_width: usize = 10;
 
     let mut rng = thread_rng();
 
@@ -220,22 +232,38 @@ fn generate_noise() {
 
     for y in 0..height {
         for x in 0..width {
-            let gx: uszie = x % cell_width;
-            let gy: uszie = y % cell_width;
+            let gox: usize = x % cell_width; /* grid offset x */
+            let goy: usize = y % cell_width; /* grid offset y */
+            let gx: usize = x / cell_width;
+            let gy: usize = y / cell_width;
 
-            let gvec =
-                if gx < 5 && gy < 5 {grid[gx + gy * grid_width]}
-                else if gx < 5 && gy >= 5 {grid[gx + (gy + 1) * grid_width]}
-                else if gx >= 5 && gy < 5 {grid[(gx + 1) + gy * grid_width]}
-                else {grid[(gx + 1) + (gy + 1) * grid_width]}
-                ;
+            let offset_vectors: [Vector2F; 4] = [
+                Vector2F {x:  ((gox) as f32),              y:  ((goy) as f32)},
+                Vector2F {x: -((cell_width - gox) as f32), y:  ((goy) as f32)},
+                Vector2F {x:  ((gox) as f32),              y: -((cell_width - goy) as f32)},
+                Vector2F {x: -((cell_width - gox) as f32), y: -((cell_width - goy) as f32)},
+            ];
 
-            points[x + y * width] =
+            let dots: [f32; 4] = [
+                Vector2F::dot(grid[(gx + 0) + (gy + 0) * grid_width], offset_vectors[0]),
+                Vector2F::dot(grid[(gx + 1) + (gy + 0) * grid_width], offset_vectors[1]),
+                Vector2F::dot(grid[(gx + 0) + (gy + 1) * grid_width], offset_vectors[2]),
+                Vector2F::dot(grid[(gx + 1) + (gy + 1) * grid_width], offset_vectors[3]),
+            ];
+
+            let sx = (gox as f32) / (cell_width as f32);
+            let sy = (goy as f32) / (cell_width as f32);
+
+            let int_x1 = interpolate(dots[0], dots[1], sx);
+            let int_x2 = interpolate(dots[2], dots[3], sx);
+            let int_y = interpolate(int_x1, int_x2, sy);
+
+            //println!("{:?}", int_y / (cell_width / 2) as f32);
+            // dot product will range from -cell_width to cell_width
+            points[x + y * width] = int_y / (cell_width as f32) * 1.5;
 
         }
     }
-
-
 
     let path = Path::new(r"./noise.png");
     let file = File::create(path).unwrap();
