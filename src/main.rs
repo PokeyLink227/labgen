@@ -31,6 +31,15 @@ struct Vector2<T> {
     y: T,
 }
 
+impl Vector2<u32> {
+    fn add_offset(&mut self, other: Vector2<i32>) {
+        *self = Vector2 {
+            x: ((self.x as i32) + other.x) as u32,
+            y: ((self.y as i32) + other.y) as u32,
+        }
+    }
+}
+
 impl Vector2<f32> {
     fn dot(lhs: Vector2<f32>, rhs: Vector2<f32>) -> f32 {
         lhs.x * rhs.x + lhs.y * rhs.y
@@ -163,6 +172,7 @@ fn create_maze_backtrack(maze_size: Vector2<u32>) -> Grid {
     maze
 }
 
+/*
 fn create_maze_prim(maze_size: Vector2<u32>) -> Grid {
     let num_tiles = maze_size.x * maze_size.y;
     let blank = Tile {status: ConnectionStatus::UnVisited, connections: [false, false, false, false]};
@@ -190,6 +200,75 @@ fn create_maze_prim(maze_size: Vector2<u32>) -> Grid {
         }
     }
     */
+
+    maze
+}
+*/
+
+fn get_valid_adj(maze: &Grid, noise_map: &Vec<f32>, pos: Vector2<u32>) -> Option<usize> {
+    let mut adj_tiles: Vec<usize> = Vec::with_capacity(4);
+
+    if pos.y >= 1              && noise_map[((pos.x + 0) + (pos.y - 1) * maze.width) as usize] < 0.0 && maze.get_tile(Vector2U {x: pos.x + 0, y: pos.y - 1}).status == ConnectionStatus::UnVisited { adj_tiles.push(0); }
+    if pos.x < maze.width - 1  && noise_map[((pos.x + 1) + (pos.y + 0) * maze.width) as usize] < 0.0 && maze.get_tile(Vector2U {x: pos.x + 1, y: pos.y + 0}).status == ConnectionStatus::UnVisited { adj_tiles.push(1); }
+    if pos.y < maze.height - 1 && noise_map[((pos.x + 0) + (pos.y + 1) * maze.width) as usize] < 0.0 && maze.get_tile(Vector2U {x: pos.x + 0, y: pos.y + 1}).status == ConnectionStatus::UnVisited { adj_tiles.push(2); }
+    if pos.x >= 1              && noise_map[((pos.x - 1) + (pos.y + 0) * maze.width) as usize] < 0.0 && maze.get_tile(Vector2U {x: pos.x - 1, y: pos.y + 0}).status == ConnectionStatus::UnVisited { adj_tiles.push(3); }
+
+    if adj_tiles.len() == 0 {
+        None
+    } else {
+        Some(adj_tiles[rand::random::<usize>() % adj_tiles.len()])
+    }
+}
+
+fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<f32>, pos: Vector2<u32>) {
+    if pos.x >= maze.width || pos.y >= maze.height { return; }
+    if noise_map[(pos.x + pos.y * maze.width) as usize] < 0.0 { return; }
+
+    let directions = [
+        Vector2 {x:  0, y: -1},
+        Vector2 {x:  1, y:  0},
+        Vector2 {x:  0, y:  1},
+        Vector2 {x: -1, y:  0},
+    ];
+
+    let mut open_tiles: Vec<Vector2<u32>> = Vec::new();
+    let mut rng = thread_rng();
+
+
+    open_tiles.push(pos);
+
+    while open_tiles.len() > 0 {
+        let current_tile_index: usize = rng.gen_range(0..open_tiles.len());
+        let current_pos: Vector2<u32> = open_tiles[current_tile_index];
+
+        if maze.tiles[(current_pos.x + current_pos.y * maze.width) as usize].status == ConnectionStatus::UnVisited {
+            maze.tiles[(current_pos.x + current_pos.y * maze.width) as usize].status = ConnectionStatus::InMaze;
+        }
+        // calculate the number of adjacent and valid empty tiles
+        match get_valid_adj(maze, noise_map, open_tiles[current_tile_index]) {
+            None => {
+                open_tiles.swap_remove(current_tile_index);
+            },
+            Some(dir) => {
+                let mut new_pos = open_tiles[current_tile_index];
+                maze.tiles[(new_pos.x + new_pos.y * maze.width) as usize].connections[dir] = true;
+                new_pos.add_offset(directions[dir]);
+                maze.tiles[(new_pos.x + new_pos.y * maze.width) as usize].connections[(dir + 2) % 4] = true;
+                open_tiles.push(new_pos);
+            },
+        }
+    }
+}
+
+fn gen_maze(size: Vector2<u32>) -> Grid {
+    let mut maze = Grid {
+        tiles: vec![Tile {status: ConnectionStatus::UnVisited, connections: [false, false, false, false]}; (size.x * size.y) as usize],
+        width: size.x,
+        height: size.y,
+    };
+    let noise_map = generate_noise(size, Vector2 {x: 7, y: 7});
+
+    flood_tile_prim(&mut maze, &noise_map, Vector2 {x: 0, y: 0});
 
     maze
 }
@@ -300,6 +379,13 @@ fn generate_noise(world_size: Vector2<u32>, grid_size: Vector2<u32>) -> Vec<f32>
         }
     }
 
+    for p in &mut points {
+        *p = if *p <= 0.0 {
+            -1.0
+        } else {
+            1.0
+        };
+    }
 
     let path = Path::new(r"./noise.png");
     let file = File::create(path).unwrap();
@@ -324,7 +410,8 @@ fn generate_noise(world_size: Vector2<u32>, grid_size: Vector2<u32>) -> Vec<f32>
 
 fn main() {
     let maze_size = Vector2 {x: 100, y: 100};
-    let nodes = create_maze_backtrack(maze_size);
+    generate_noise(maze_size, Vector2 {x: 7, y: 7});
+    let nodes = gen_maze(maze_size);
     generate_image(&nodes);
 
     println!("Successfully Generated Maze");
