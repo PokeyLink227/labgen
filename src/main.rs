@@ -222,7 +222,8 @@ fn get_valid_adj(maze: &Grid, noise_map: &Vec<f32>, pos: Vector2<u32>) -> Option
 
 fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<f32>, pos: Vector2<u32>) {
     if pos.x >= maze.width || pos.y >= maze.height { return; }
-    if noise_map[(pos.x + pos.y * maze.width) as usize] < 0.0 { return; }
+    if noise_map[(pos.x + pos.y * maze.width) as usize] > 0.0 { return; }
+    if maze.tiles[(pos.x + pos.y * maze.width) as usize].status != ConnectionStatus::UnVisited { return; }
 
     let directions = [
         Vector2 {x:  0, y: -1},
@@ -234,16 +235,13 @@ fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<f32>, pos: Vector2<u32>) {
     let mut open_tiles: Vec<Vector2<u32>> = Vec::new();
     let mut rng = thread_rng();
 
-
     open_tiles.push(pos);
+    maze.tiles[(pos.x + pos.y * maze.width) as usize].status = ConnectionStatus::InMaze;
 
     while open_tiles.len() > 0 {
         let current_tile_index: usize = rng.gen_range(0..open_tiles.len());
         let current_pos: Vector2<u32> = open_tiles[current_tile_index];
 
-        if maze.tiles[(current_pos.x + current_pos.y * maze.width) as usize].status == ConnectionStatus::UnVisited {
-            maze.tiles[(current_pos.x + current_pos.y * maze.width) as usize].status = ConnectionStatus::InMaze;
-        }
         // calculate the number of adjacent and valid empty tiles
         match get_valid_adj(maze, noise_map, open_tiles[current_tile_index]) {
             None => {
@@ -251,10 +249,12 @@ fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<f32>, pos: Vector2<u32>) {
             },
             Some(dir) => {
                 let mut new_pos = open_tiles[current_tile_index];
-                maze.tiles[(new_pos.x + new_pos.y * maze.width) as usize].connections[dir] = true;
                 new_pos.add_offset(directions[dir]);
-                maze.tiles[(new_pos.x + new_pos.y * maze.width) as usize].connections[(dir + 2) % 4] = true;
+                maze.tiles[(new_pos.x + new_pos.y * maze.width) as usize].status = ConnectionStatus::InMaze;
                 open_tiles.push(new_pos);
+
+                maze.tiles[(current_pos.x + current_pos.y * maze.width) as usize].connections[dir] = true;
+                maze.tiles[(new_pos.x + new_pos.y * maze.width) as usize].connections[(dir + 2) % 4] = true;
             },
         }
     }
@@ -268,7 +268,11 @@ fn gen_maze(size: Vector2<u32>) -> Grid {
     };
     let noise_map = generate_noise(size, Vector2 {x: 7, y: 7});
 
-    flood_tile_prim(&mut maze, &noise_map, Vector2 {x: 0, y: 0});
+    for y in 0..size.y {
+        for x in 0..size.x {
+            flood_tile_prim(&mut maze, &noise_map, Vector2 {x: x, y: y});
+        }
+    }
 
     maze
 }
@@ -410,7 +414,7 @@ fn generate_noise(world_size: Vector2<u32>, grid_size: Vector2<u32>) -> Vec<f32>
 
 fn main() {
     let maze_size = Vector2 {x: 100, y: 100};
-    generate_noise(maze_size, Vector2 {x: 7, y: 7});
+    //generate_noise(maze_size, Vector2 {x: 7, y: 7});
     let nodes = gen_maze(maze_size);
     generate_image(&nodes);
 
