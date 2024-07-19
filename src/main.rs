@@ -292,6 +292,10 @@ fn gen_maze(size: Vector2<u32>) -> Grid {
         }
     }
 
+    /*
+        need to add random stopping and then also implement connecting of maze regions
+    */
+
     maze
 }
 
