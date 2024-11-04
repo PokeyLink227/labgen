@@ -130,6 +130,11 @@ impl Grid {
         self.tiles[(pos.x as u32 + pos.y as u32 * self.width) as usize]
     }
 
+    fn get_tile_mut(&mut self, pos: Point) -> &mut Tile {
+        assert!(self.contains(pos));
+        &mut self.tiles[(pos.x as u32 + pos.y as u32 * self.width) as usize]
+    }
+
     fn set_tile_pt(&mut self, pos: Point, new: Tile) {
         assert!(self.contains(pos));
         self.tiles[(pos.x as u32 + pos.y as u32 * self.width) as usize] = new;
@@ -159,17 +164,12 @@ fn create_maze_backtrack(maze_size: Vector2<u32>) -> Grid {
     let mut stack: Vec<Point> = Vec::new();
     let mut num_visited = 0;
     let mut current_pos: Point = Point { x: 0, y: 0 };
-    let mut current_tile: Tile = maze.get_tile_pt(current_pos);
+
+    maze.get_tile_mut(current_pos).status = ConnectionStatus::InMaze;
+    stack.push(current_pos);
+    num_visited += 1;
 
     while num_visited < num_tiles {
-        if current_tile.status == ConnectionStatus::UnVisited {
-            current_tile.status = ConnectionStatus::InMaze;
-            maze.set_tile_pt(current_pos, current_tile);
-
-            stack.push(current_pos);
-            num_visited += 1;
-        }
-
         let next = pick_random(
             current_pos
                 .adjacent()
@@ -185,16 +185,21 @@ fn create_maze_backtrack(maze_size: Vector2<u32>) -> Grid {
         match next {
             None => {
                 current_pos = stack.pop().unwrap();
-                current_tile = maze.get_tile_pt(current_pos);
             }
             Some(next) => {
-                current_tile.connections[next.0] = true;
-                maze.set_tile_pt(current_pos, current_tile);
+                //current_tile.connections[next.0] = true;
+                maze.get_tile_mut(current_pos).connections[next.0] = true;
 
                 current_pos = next.1;
-                current_tile = maze.get_tile_pt(current_pos);
-                current_tile.connections[(next.0 + 2) % 4] = true; /* add connection in opposite direction on next tile */
-                maze.set_tile_pt(current_pos, current_tile);
+                maze.get_tile_mut(current_pos).connections[(next.0 + 2) % 4] = true;
+                maze.get_tile_mut(current_pos).status = ConnectionStatus::InMaze;
+                //current_tile = maze.get_tile_pt(current_pos);
+                //current_tile.connections[(next.0 + 2) % 4] = true; /* add connection in opposite direction on next tile */
+                //current_tile.status = ConnectionStatus::InMaze;
+                //maze.set_tile_pt(current_pos, current_tile);
+
+                stack.push(current_pos);
+                num_visited += 1;
             }
         }
     }
