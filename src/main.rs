@@ -187,16 +187,11 @@ fn create_maze_backtrack(maze_size: Vector2<u32>) -> Grid {
                 current_pos = stack.pop().unwrap();
             }
             Some(next) => {
-                //current_tile.connections[next.0] = true;
                 maze.get_tile_mut(current_pos).connections[next.0] = true;
 
                 current_pos = next.1;
                 maze.get_tile_mut(current_pos).connections[(next.0 + 2) % 4] = true;
                 maze.get_tile_mut(current_pos).status = ConnectionStatus::InMaze;
-                //current_tile = maze.get_tile_pt(current_pos);
-                //current_tile.connections[(next.0 + 2) % 4] = true; /* add connection in opposite direction on next tile */
-                //current_tile.status = ConnectionStatus::InMaze;
-                //maze.set_tile_pt(current_pos, current_tile);
 
                 stack.push(current_pos);
                 num_visited += 1;
