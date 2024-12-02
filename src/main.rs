@@ -113,11 +113,11 @@ struct Grid {
 }
 
 impl Grid {
-    fn get_tile(&self, pos: Vector2<u32>) -> Tile {
+    fn get_tile_vec(&self, pos: Vector2<u32>) -> Tile {
         self.tiles[(pos.x + pos.y * self.width) as usize]
     }
 
-    fn set_tile(&mut self, pos: Vector2<u32>, new: Tile) {
+    fn set_tile_vec(&mut self, pos: Vector2<u32>, new: Tile) {
         self.tiles[(pos.x + pos.y * self.width) as usize] = new;
     }
 
@@ -125,7 +125,7 @@ impl Grid {
         pt.x >= 0 && (pt.x as u32) < self.width && pt.y >= 0 && (pt.y as u32) < self.height
     }
 
-    fn get_tile_pt(&self, pos: Point) -> Tile {
+    fn get_tile(&self, pos: Point) -> Tile {
         assert!(self.contains(pos));
         self.tiles[(pos.x as u32 + pos.y as u32 * self.width) as usize]
     }
@@ -135,7 +135,7 @@ impl Grid {
         &mut self.tiles[(pos.x as u32 + pos.y as u32 * self.width) as usize]
     }
 
-    fn set_tile_pt(&mut self, pos: Point, new: Tile) {
+    fn set_tile(&mut self, pos: Point, new: Tile) {
         assert!(self.contains(pos));
         self.tiles[(pos.x as u32 + pos.y as u32 * self.width) as usize] = new;
     }
@@ -176,7 +176,7 @@ fn create_maze_backtrack(maze_size: Vector2<u32>) -> Grid {
                 .into_iter()
                 .enumerate()
                 .filter(|(_, x)| {
-                    maze.contains(*x) && maze.get_tile_pt(*x).status == ConnectionStatus::UnVisited
+                    maze.contains(*x) && maze.get_tile(*x).status == ConnectionStatus::UnVisited
                 })
                 .collect::<Vec<(usize, Point)>>()
                 .as_ref(),
@@ -202,153 +202,103 @@ fn create_maze_backtrack(maze_size: Vector2<u32>) -> Grid {
     maze
 }
 
-fn get_valid_adj(maze: &Grid, noise_map: &Vec<u8>, pos: Vector2<u32>, valid: u8) -> Option<usize> {
-    let mut adj_tiles: Vec<usize> = Vec::with_capacity(4);
-
-    if pos.y >= 1
-        && noise_map[((pos.x + 0) + (pos.y - 1) * maze.width) as usize] == valid
-        && maze
-            .get_tile(Vector2 {
-                x: pos.x + 0,
-                y: pos.y - 1,
-            })
-            .status
-            == ConnectionStatus::UnVisited
-    {
-        adj_tiles.push(0);
-    }
-    if pos.x < maze.width - 1
-        && noise_map[((pos.x + 1) + (pos.y + 0) * maze.width) as usize] == valid
-        && maze
-            .get_tile(Vector2 {
-                x: pos.x + 1,
-                y: pos.y + 0,
-            })
-            .status
-            == ConnectionStatus::UnVisited
-    {
-        adj_tiles.push(1);
-    }
-    if pos.y < maze.height - 1
-        && noise_map[((pos.x + 0) + (pos.y + 1) * maze.width) as usize] == valid
-        && maze
-            .get_tile(Vector2 {
-                x: pos.x + 0,
-                y: pos.y + 1,
-            })
-            .status
-            == ConnectionStatus::UnVisited
-    {
-        adj_tiles.push(2);
-    }
-    if pos.x >= 1
-        && noise_map[((pos.x - 1) + (pos.y + 0) * maze.width) as usize] == valid
-        && maze
-            .get_tile(Vector2 {
-                x: pos.x - 1,
-                y: pos.y + 0,
-            })
-            .status
-            == ConnectionStatus::UnVisited
-    {
-        adj_tiles.push(3);
-    }
-
-    if adj_tiles.len() == 0 {
-        None
-    } else {
-        Some(adj_tiles[rand::random::<usize>() % adj_tiles.len()])
-    }
-}
-
-fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<u8>, pos: Vector2<u32>) {
-    if pos.x >= maze.width || pos.y >= maze.height {
+fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point) {
+    if pos.x >= maze.width as i32 || pos.y >= maze.height as i32 {
         return;
     }
-    if noise_map[(pos.x + pos.y * maze.width) as usize] != 0 {
+    if noise_map[(pos.x + pos.y * maze.width as i32) as usize] != 0 {
         return;
     }
-    if maze.tiles[(pos.x + pos.y * maze.width) as usize].status != ConnectionStatus::UnVisited {
+    if maze.tiles[(pos.x + pos.y * maze.width as i32) as usize].status
+        != ConnectionStatus::UnVisited
+    {
         return;
     }
 
-    let directions = [
-        Vector2 { x: 0, y: -1 },
-        Vector2 { x: 1, y: 0 },
-        Vector2 { x: 0, y: 1 },
-        Vector2 { x: -1, y: 0 },
-    ];
-
-    let mut open_tiles: Vec<Vector2<u32>> = Vec::new();
+    let mut open_tiles: Vec<Point> = Vec::new();
     let mut rng = thread_rng();
 
     open_tiles.push(pos);
-    maze.tiles[(pos.x + pos.y * maze.width) as usize].status = ConnectionStatus::InMaze;
-
-    while open_tiles.len() > 0 {
+    maze.tiles[(pos.x + pos.y * maze.width as i32) as usize].status = ConnectionStatus::InMaze;
+    while !open_tiles.is_empty() {
         let current_tile_index: usize = rng.gen_range(0..open_tiles.len());
-        let current_pos: Vector2<u32> = open_tiles[current_tile_index];
+        pos = open_tiles[current_tile_index];
 
-        // calculate the number of adjacent and valid empty tiles
-        match get_valid_adj(maze, noise_map, open_tiles[current_tile_index], 0) {
+        let next = pick_random(
+            pos.adjacent()
+                .into_iter()
+                .enumerate()
+                .filter(|(_, x)| {
+                    maze.contains(*x)
+                        && maze.get_tile(*x).status == ConnectionStatus::UnVisited
+                        && noise_map[(x.x + x.y * maze.width as i32) as usize] == 1
+                })
+                .collect::<Vec<(usize, Point)>>()
+                .as_ref(),
+        );
+
+        match next {
             None => {
                 open_tiles.swap_remove(current_tile_index);
             }
-            Some(dir) => {
-                let new_pos = current_pos.add_offset(directions[dir]);
-                maze.tiles[(new_pos.x + new_pos.y * maze.width) as usize].status =
-                    ConnectionStatus::InMaze;
-                open_tiles.push(new_pos);
+            Some(next) => {
+                maze.get_tile_mut(pos).connections[next.0] = true;
 
-                maze.tiles[(current_pos.x + current_pos.y * maze.width) as usize].connections
-                    [dir] = true;
-                maze.tiles[(new_pos.x + new_pos.y * maze.width) as usize].connections
-                    [(dir + 2) % 4] = true;
+                pos = next.1;
+                maze.get_tile_mut(pos).connections[(next.0 + 2) % 4] = true;
+                maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
+
+                open_tiles.push(pos);
             }
         }
     }
 }
 
-fn flood_tile_backtrack(maze: &mut Grid, noise_map: &Vec<u8>, pos: Vector2<u32>) {
-    if pos.x >= maze.width || pos.y >= maze.height {
+fn flood_tile_backtrack(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point) {
+    if pos.x >= maze.width as i32 || pos.y >= maze.height as i32 {
         return;
     }
-    if noise_map[(pos.x + pos.y * maze.width) as usize] != 1 {
+    if noise_map[(pos.x + pos.y * maze.width as i32) as usize] != 1 {
         return;
     }
-    if maze.tiles[(pos.x + pos.y * maze.width) as usize].status != ConnectionStatus::UnVisited {
+    if maze.tiles[(pos.x + pos.y * maze.width as i32) as usize].status
+        != ConnectionStatus::UnVisited
+    {
         return;
     }
 
-    let directions = [
-        Vector2 { x: 0, y: -1 },
-        Vector2 { x: 1, y: 0 },
-        Vector2 { x: 0, y: 1 },
-        Vector2 { x: -1, y: 0 },
-    ];
-
-    let mut tile_stack: Vec<Vector2<u32>> = Vec::new();
+    let mut tile_stack: Vec<Point> = Vec::new();
 
     tile_stack.push(pos);
-    maze.tiles[(pos.x + pos.y * maze.width) as usize].status = ConnectionStatus::InMaze;
+    maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
 
     while !tile_stack.is_empty() {
-        let current_pos: Vector2<u32> = *tile_stack.last().unwrap();
+        let next = pick_random(
+            pos.adjacent()
+                .into_iter()
+                .enumerate()
+                .filter(|(_, x)| {
+                    maze.contains(*x)
+                        && maze.get_tile(*x).status == ConnectionStatus::UnVisited
+                        && noise_map[(x.x + x.y * maze.width as i32) as usize] == 1
+                })
+                .collect::<Vec<(usize, Point)>>()
+                .as_ref(),
+        );
 
-        match get_valid_adj(maze, noise_map, current_pos, 1) {
+        match next {
             None => {
-                tile_stack.pop();
+                // we can upwrap here because we ensure the stack is non-empty in the loop clause
+                pos = tile_stack.pop().unwrap();
             }
-            Some(dir) => {
-                let new_pos = current_pos.add_offset(directions[dir]);
-                maze.tiles[(new_pos.x + new_pos.y * maze.width) as usize].status =
-                    ConnectionStatus::InMaze;
-                tile_stack.push(new_pos);
+            Some(next) => {
+                maze.get_tile_mut(pos).connections[next.0] = true;
 
-                maze.tiles[(current_pos.x + current_pos.y * maze.width) as usize].connections
-                    [dir] = true;
-                maze.tiles[(new_pos.x + new_pos.y * maze.width) as usize].connections
-                    [(dir + 2) % 4] = true;
+                pos = next.1;
+                maze.get_tile_mut(pos).connections[(next.0 + 2) % 4] = true;
+                maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
+
+                tile_stack.push(pos);
             }
         }
     }
@@ -371,10 +321,10 @@ fn gen_maze(size: Vector2<u32>) -> Grid {
         .map(|x| if *x < 0.0 { 0 } else { 1 })
         .collect();
 
-    for y in 0..size.y {
-        for x in 0..size.x {
-            flood_tile_prim(&mut maze, &noise_map, Vector2 { x: x, y: y });
-            flood_tile_backtrack(&mut maze, &noise_map, Vector2 { x: x, y: y });
+    for y in 0..size.y as i32 {
+        for x in 0..size.x as i32 {
+            flood_tile_prim(&mut maze, &noise_map, Point { x, y });
+            flood_tile_backtrack(&mut maze, &noise_map, Point { x, y });
         }
     }
 
@@ -418,7 +368,7 @@ fn generate_image(maze: &Grid) {
                     green: 255,
                     blue: 255,
                 };
-            if maze.get_tile(Vector2 { x: x, y: y }).connections[Direction::North as usize] {
+            if maze.get_tile_vec(Vector2 { x, y }).connections[Direction::North as usize] {
                 pixels[((x * cell_width + 1) + ((y * cell_width + 0) * image_dimensions.x))
                     as usize] = ColorRGB {
                     red: 255,
@@ -426,7 +376,7 @@ fn generate_image(maze: &Grid) {
                     blue: 255,
                 };
             }
-            if maze.get_tile(Vector2 { x: x, y: y }).connections[Direction::West as usize] {
+            if maze.get_tile_vec(Vector2 { x, y }).connections[Direction::West as usize] {
                 pixels[((x * cell_width + 0) + ((y * cell_width + 1) * image_dimensions.x))
                     as usize] = ColorRGB {
                     red: 255,
@@ -593,9 +543,9 @@ fn generate_noise(world_size: Vector2<u32>, grid_size: Vector2<u32>) -> Vec<f32>
 }
 
 fn main() {
-    let maze_size = Vector2 { x: 3, y: 3 };
-    //generate_noise(maze_size, Vector2 {x: 7, y: 7});
-    let nodes = create_maze_backtrack(maze_size);
+    let maze_size = Vector2 { x: 30, y: 14 };
+    //generate_noise(maze_size, Vector2 { x: 7, y: 7 });
+    let nodes = gen_maze(maze_size);
     generate_image(&nodes);
 
     println!("Successfully Generated Maze");
