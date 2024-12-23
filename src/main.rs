@@ -10,8 +10,8 @@ use std::path::Path;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct Point {
-    x: i32,
-    y: i32,
+    x: i16,
+    y: i16,
 }
 
 impl Add for Point {
@@ -96,18 +96,13 @@ enum ConnectionStatus {
 }
 
 #[derive(Debug, Clone, Copy)]
+#[repr(u8)]
 enum Direction {
     None = 0b0000,
     North = 0b0001,
     East = 0b0010,
     South = 0b0100,
     West = 0b1000,
-}
-
-impl Direction {
-    fn opposite(&self) -> Self {
-        ((((*self as u8) << 2) | ((*self as u8) >> 2)) & 0b1111).into()
-    }
 }
 
 impl From<u8> for Direction {
@@ -126,7 +121,6 @@ impl From<u8> for Direction {
 struct Tile {
     status: ConnectionStatus,
     connections: u8,
-    //connections: [bool; 4],
 }
 
 #[derive(Debug)]
@@ -177,10 +171,10 @@ fn pick_random(points: &[(usize, Point)]) -> Option<(usize, Point)> {
     }
 }
 
-fn create_maze_backtrack(maze_size: Vector2<u32>) -> Grid {
+fn create_maze_backtrack(maze_size: Vector2<u32>) -> (Grid, Vec<(Point, Direction)>) {
     let blank: Tile = Tile {
         status: ConnectionStatus::UnVisited,
-        connections: 0,
+        connections: Direction::None as u8,
     };
     let num_tiles = maze_size.x * maze_size.y;
 
@@ -191,9 +185,11 @@ fn create_maze_backtrack(maze_size: Vector2<u32>) -> Grid {
     };
     let mut stack: Vec<Point> = Vec::new();
     let mut current_pos: Point = Point { x: 0, y: 0 };
+    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(num_tiles as usize);
 
     maze.get_tile_mut(current_pos).status = ConnectionStatus::InMaze;
     stack.push(current_pos);
+    history.push((current_pos, Direction::None.into()));
 
     while !stack.is_empty() {
         let next = pick_random(
@@ -213,18 +209,20 @@ fn create_maze_backtrack(maze_size: Vector2<u32>) -> Grid {
                 current_pos = stack.pop().unwrap();
             }
             Some(next) => {
-                maze.get_tile_mut(current_pos).connections |= 0b0001 << next.0;
+                let dir = 0b0001 << next.0;
+                maze.get_tile_mut(current_pos).connections |= dir;
 
                 current_pos = next.1;
-                maze.get_tile_mut(current_pos).connections |= opposite(0b0001 << next.0);
+                maze.get_tile_mut(current_pos).connections |= opposite(dir);
                 maze.get_tile_mut(current_pos).status = ConnectionStatus::InMaze;
 
                 stack.push(current_pos);
+                history.push((current_pos, opposite(dir).into()));
             }
         }
     }
 
-    maze
+    (maze, history)
 }
 
 fn create_maze_prim(maze_size: Vector2<u32>) -> Grid {
@@ -245,7 +243,7 @@ fn create_maze_prim(maze_size: Vector2<u32>) -> Grid {
     let mut pos: Point = Point { x: 0, y: 0 };
 
     open_tiles.push(pos);
-    maze.tiles[(pos.x + pos.y * maze.width as i32) as usize].status = ConnectionStatus::InMaze;
+    maze.tiles[(pos.x + pos.y * maze.width as i16) as usize].status = ConnectionStatus::InMaze;
     while !open_tiles.is_empty() {
         let current_tile_index: usize = rng.gen_range(0..open_tiles.len());
         pos = open_tiles[current_tile_index];
@@ -281,13 +279,13 @@ fn create_maze_prim(maze_size: Vector2<u32>) -> Grid {
 }
 
 fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point) {
-    if pos.x >= maze.width as i32 || pos.y >= maze.height as i32 {
+    if pos.x >= maze.width as i16 || pos.y >= maze.height as i16 {
         return;
     }
-    if noise_map[(pos.x + pos.y * maze.width as i32) as usize] != 0 {
+    if noise_map[(pos.x + pos.y * maze.width as i16) as usize] != 0 {
         return;
     }
-    if maze.tiles[(pos.x + pos.y * maze.width as i32) as usize].status
+    if maze.tiles[(pos.x + pos.y * maze.width as i16) as usize].status
         != ConnectionStatus::UnVisited
     {
         return;
@@ -297,7 +295,7 @@ fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point) {
     let mut rng = thread_rng();
 
     open_tiles.push(pos);
-    maze.tiles[(pos.x + pos.y * maze.width as i32) as usize].status = ConnectionStatus::InMaze;
+    maze.tiles[(pos.x + pos.y * maze.width as i16) as usize].status = ConnectionStatus::InMaze;
     while !open_tiles.is_empty() {
         let current_tile_index: usize = rng.gen_range(0..open_tiles.len());
         pos = open_tiles[current_tile_index];
@@ -309,7 +307,7 @@ fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point) {
                 .filter(|(_, x)| {
                     maze.contains(*x)
                         && maze.get_tile(*x).status == ConnectionStatus::UnVisited
-                        && noise_map[(x.x + x.y * maze.width as i32) as usize] == 1
+                        && noise_map[(x.x + x.y * maze.width as i16) as usize] == 1
                 })
                 .collect::<Vec<(usize, Point)>>()
                 .as_ref(),
@@ -333,13 +331,13 @@ fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point) {
 }
 
 fn flood_tile_backtrack(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point) {
-    if pos.x >= maze.width as i32 || pos.y >= maze.height as i32 {
+    if pos.x >= maze.width as i16 || pos.y >= maze.height as i16 {
         return;
     }
-    if noise_map[(pos.x + pos.y * maze.width as i32) as usize] != 1 {
+    if noise_map[(pos.x + pos.y * maze.width as i16) as usize] != 1 {
         return;
     }
-    if maze.tiles[(pos.x + pos.y * maze.width as i32) as usize].status
+    if maze.tiles[(pos.x + pos.y * maze.width as i16) as usize].status
         != ConnectionStatus::UnVisited
     {
         return;
@@ -358,7 +356,7 @@ fn flood_tile_backtrack(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point) {
                 .filter(|(_, x)| {
                     maze.contains(*x)
                         && maze.get_tile(*x).status == ConnectionStatus::UnVisited
-                        && noise_map[(x.x + x.y * maze.width as i32) as usize] == 1
+                        && noise_map[(x.x + x.y * maze.width as i16) as usize] == 1
                 })
                 .collect::<Vec<(usize, Point)>>()
                 .as_ref(),
@@ -399,8 +397,8 @@ fn gen_maze(size: Vector2<u32>) -> Grid {
         .map(|x| if *x < 0.0 { 0 } else { 1 })
         .collect();
 
-    for y in 0..size.y as i32 {
-        for x in 0..size.x as i32 {
+    for y in 0..size.y as i16 {
+        for x in 0..size.x as i16 {
             flood_tile_prim(&mut maze, &noise_map, Point { x, y });
             flood_tile_backtrack(&mut maze, &noise_map, Point { x, y });
         }
@@ -413,54 +411,66 @@ fn gen_maze(size: Vector2<u32>) -> Grid {
     maze
 }
 
-fn generate_gif(maze: &Grid) {
+fn generate_gif(maze: &Grid, history: &[(Point, Direction)]) {
     let cell_width: u16 = 2;
 
-    let color_map = &[0xFF, 0xFF, 0xFF, 0, 0, 0];
+    let color_map = &[0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF];
     let (width, height) = ((maze.width + 0) as u16 * cell_width + 1, (maze.height + 0) as u16 * cell_width + 1);
-    let mut pixels: Vec<Vec<u8>> = vec![vec![
-        1;
-        (width * height) as usize
-    ]];
-
-    for y in 0..maze.height as u16 {
-        for x in 0..maze.width as u16 {
-            pixels[0][((x * cell_width + 1) + ((y * cell_width + 1) * width)) as usize] =
-                0;
-            if maze
-                .get_tile(Point {
-                    x: x as i32,
-                    y: y as i32,
-                })
-                .connections & Direction::North as u8 != 0
-            {
-                pixels[0][((x * cell_width + 1) + ((y * cell_width + 0) * width))
-                    as usize] = 0;
-            }
-            if maze
-                .get_tile(Point {
-                    x: x as i32,
-                    y: y as i32,
-                })
-                .connections & Direction::West as u8 != 0
-            {
-                pixels[0][((x * cell_width + 0) + ((y * cell_width + 1) * width))
-                    as usize] = 0;
-            }
-        }
-    }
 
 
+    let mut state: Vec<u8> = vec![0; (width * height) as usize];
     let mut image = File::create("./animation.gif").unwrap();
     let mut encoder = Encoder::new(&mut image, width, height, color_map).unwrap();
     encoder.set_repeat(Repeat::Infinite).unwrap();
-    for state in &pixels {
+
+    for (pt, dir) in history {
+        // update buffer
+        state[((pt.x as u16 * cell_width + 1) + (pt.y as u16 * cell_width + 1) * width) as usize] = 1;
+        match dir {
+            Direction::None => {}
+            Direction::North => {
+                state[(
+                    (pt.x as u16 * cell_width + 1 + 0) +
+                    (pt.y as u16 * cell_width + 1 - 1) * width
+                ) as usize] = 1;
+            }
+            Direction::East => {
+                state[(
+                    (pt.x as u16 * cell_width + 1 + 1) +
+                    (pt.y as u16 * cell_width + 1 + 0) * width
+                ) as usize] = 1;
+            }
+            Direction::South => {
+                state[(
+                    (pt.x as u16 * cell_width + 1 + 0) +
+                    (pt.y as u16 * cell_width + 1 + 1) * width
+                ) as usize] = 1;
+            }
+            Direction::West => {
+                state[(
+                    (pt.x as u16 * cell_width + 1 - 1) +
+                    (pt.y as u16 * cell_width + 1 + 0) * width
+                ) as usize] = 1;
+            }
+        }
+
+
+        // generate and save frame
         let mut frame = Frame::default();
         frame.width = width;
         frame.height = height;
-        frame.buffer = Cow::Borrowed(&*state);
+        frame.delay = 10;
+        frame.buffer = Cow::Borrowed(&state);
         encoder.write_frame(&frame).unwrap();
     }
+
+    // final frame with a higher delay
+    let mut frame = Frame::default();
+    frame.width = width;
+    frame.height = height;
+    frame.delay = 100;
+    frame.buffer = Cow::Borrowed(&state);
+    encoder.write_frame(&frame).unwrap();
 }
 
 fn generate_png(maze: &Grid) {
@@ -498,8 +508,8 @@ fn generate_png(maze: &Grid) {
                 };
             if maze
                 .get_tile(Point {
-                    x: x as i32,
-                    y: y as i32,
+                    x: x as i16,
+                    y: y as i16,
                 })
                 .connections & Direction::North as u8 != 0
             {
@@ -512,8 +522,8 @@ fn generate_png(maze: &Grid) {
             }
             if maze
                 .get_tile(Point {
-                    x: x as i32,
-                    y: y as i32,
+                    x: x as i16,
+                    y: y as i16,
                 })
                 .connections & Direction::West as u8 != 0
             {
@@ -685,9 +695,8 @@ fn generate_noise(world_size: Vector2<u32>, grid_size: Vector2<u32>) -> Vec<f32>
 fn main() {
     let maze_size = Vector2 { x: 15, y: 15 };
     //generate_noise(maze_size, Vector2 { x: 7, y: 7 });
-    let nodes = create_maze_backtrack(maze_size);
-    generate_gif(&nodes);
+    let (nodes, hist) = create_maze_backtrack(maze_size);
+    generate_gif(&nodes, &hist);
 
-    println!("{}", std::mem::size_of::<Tile>());
     println!("Successfully Generated Maze");
 }
