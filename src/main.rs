@@ -184,16 +184,16 @@ fn create_maze_backtrack(maze_size: Vector2<u32>) -> (Grid, Vec<(Point, Directio
         height: maze_size.y,
     };
     let mut stack: Vec<Point> = Vec::new();
-    let mut current_pos: Point = Point { x: 0, y: 0 };
+    let mut pos: Point = Point { x: 0, y: 0 };
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(num_tiles as usize);
 
-    maze.get_tile_mut(current_pos).status = ConnectionStatus::InMaze;
-    stack.push(current_pos);
-    history.push((current_pos, Direction::None.into()));
+    maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
+    stack.push(pos);
+    history.push((pos, Direction::None.into()));
 
     while !stack.is_empty() {
         let next = pick_random(
-            current_pos
+            pos
                 .adjacent()
                 .into_iter()
                 .enumerate()
@@ -206,18 +206,18 @@ fn create_maze_backtrack(maze_size: Vector2<u32>) -> (Grid, Vec<(Point, Directio
 
         match next {
             None => {
-                current_pos = stack.pop().unwrap();
+                pos = stack.pop().unwrap();
             }
             Some(next) => {
                 let dir = 0b0001 << next.0;
-                maze.get_tile_mut(current_pos).connections |= dir;
+                maze.get_tile_mut(pos).connections |= dir;
 
-                current_pos = next.1;
-                maze.get_tile_mut(current_pos).connections |= opposite(dir);
-                maze.get_tile_mut(current_pos).status = ConnectionStatus::InMaze;
+                pos = next.1;
+                maze.get_tile_mut(pos).connections |= opposite(dir);
+                maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
 
-                stack.push(current_pos);
-                history.push((current_pos, opposite(dir).into()));
+                stack.push(pos);
+                history.push((pos, opposite(dir).into()));
             }
         }
     }
@@ -225,10 +225,10 @@ fn create_maze_backtrack(maze_size: Vector2<u32>) -> (Grid, Vec<(Point, Directio
     (maze, history)
 }
 
-fn create_maze_prim(maze_size: Vector2<u32>) -> Grid {
+fn create_maze_prim(maze_size: Vector2<u32>) -> (Grid, Vec<(Point, Direction)>) {
     let blank: Tile = Tile {
         status: ConnectionStatus::UnVisited,
-        connections: 0,
+        connections: Direction::None as u8,
     };
     let num_tiles = maze_size.x * maze_size.y;
 
@@ -239,11 +239,14 @@ fn create_maze_prim(maze_size: Vector2<u32>) -> Grid {
     };
 
     let mut open_tiles: Vec<Point> = Vec::new();
+    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(num_tiles as usize);
     let mut rng = thread_rng();
     let mut pos: Point = Point { x: 0, y: 0 };
 
+    maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
     open_tiles.push(pos);
-    maze.tiles[(pos.x + pos.y * maze.width as i16) as usize].status = ConnectionStatus::InMaze;
+    history.push((pos, Direction::None.into()));
+
     while !open_tiles.is_empty() {
         let current_tile_index: usize = rng.gen_range(0..open_tiles.len());
         pos = open_tiles[current_tile_index];
@@ -264,18 +267,20 @@ fn create_maze_prim(maze_size: Vector2<u32>) -> Grid {
                 open_tiles.swap_remove(current_tile_index);
             }
             Some(next) => {
-                maze.get_tile_mut(pos).connections |= 0b0001 << next.0;
+                let dir = 0b0001 << next.0;
+                maze.get_tile_mut(pos).connections |= dir;
 
                 pos = next.1;
-                maze.get_tile_mut(pos).connections |= opposite(0b0001 << next.0);
+                maze.get_tile_mut(pos).connections |= opposite(dir);
                 maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
 
                 open_tiles.push(pos);
+                history.push((pos, opposite(dir).into()));
             }
         }
     }
 
-    maze
+    (maze, history)
 }
 
 fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point) {
@@ -695,7 +700,7 @@ fn generate_noise(world_size: Vector2<u32>, grid_size: Vector2<u32>) -> Vec<f32>
 fn main() {
     let maze_size = Vector2 { x: 15, y: 15 };
     //generate_noise(maze_size, Vector2 { x: 7, y: 7 });
-    let (nodes, hist) = create_maze_backtrack(maze_size);
+    let (nodes, hist) = create_maze_prim(maze_size);
     generate_gif(&nodes, &hist);
 
     println!("Successfully Generated Maze");
