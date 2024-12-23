@@ -1,6 +1,8 @@
 #![allow(dead_code)]
 use rand;
 use rand::{thread_rng, Rng};
+use gif::{Frame, Encoder, Repeat};
+use std::borrow::Cow;
 use std::fs::File;
 use std::io::BufWriter;
 use std::ops::{Add, AddAssign};
@@ -411,7 +413,57 @@ fn gen_maze(size: Vector2<u32>) -> Grid {
     maze
 }
 
-fn generate_image(maze: &Grid) {
+fn generate_gif(maze: &Grid) {
+    let cell_width: u16 = 2;
+
+    let color_map = &[0xFF, 0xFF, 0xFF, 0, 0, 0];
+    let (width, height) = ((maze.width + 0) as u16 * cell_width + 1, (maze.height + 0) as u16 * cell_width + 1);
+    let mut pixels: Vec<Vec<u8>> = vec![vec![
+        1;
+        (width * height) as usize
+    ]];
+
+    for y in 0..maze.height as u16 {
+        for x in 0..maze.width as u16 {
+            pixels[0][((x * cell_width + 1) + ((y * cell_width + 1) * width)) as usize] =
+                0;
+            if maze
+                .get_tile(Point {
+                    x: x as i32,
+                    y: y as i32,
+                })
+                .connections & Direction::North as u8 != 0
+            {
+                pixels[0][((x * cell_width + 1) + ((y * cell_width + 0) * width))
+                    as usize] = 0;
+            }
+            if maze
+                .get_tile(Point {
+                    x: x as i32,
+                    y: y as i32,
+                })
+                .connections & Direction::West as u8 != 0
+            {
+                pixels[0][((x * cell_width + 0) + ((y * cell_width + 1) * width))
+                    as usize] = 0;
+            }
+        }
+    }
+
+
+    let mut image = File::create("./animation.gif").unwrap();
+    let mut encoder = Encoder::new(&mut image, width, height, color_map).unwrap();
+    encoder.set_repeat(Repeat::Infinite).unwrap();
+    for state in &pixels {
+        let mut frame = Frame::default();
+        frame.width = width;
+        frame.height = height;
+        frame.buffer = Cow::Borrowed(&*state);
+        encoder.write_frame(&frame).unwrap();
+    }
+}
+
+fn generate_png(maze: &Grid) {
     let cell_width = 2;
     let image_dimensions = Vector2 {
         x: maze.width * cell_width + 1,
@@ -634,7 +686,7 @@ fn main() {
     let maze_size = Vector2 { x: 15, y: 15 };
     //generate_noise(maze_size, Vector2 { x: 7, y: 7 });
     let nodes = create_maze_backtrack(maze_size);
-    generate_image(&nodes);
+    generate_gif(&nodes);
 
     println!("{}", std::mem::size_of::<Tile>());
     println!("Successfully Generated Maze");
