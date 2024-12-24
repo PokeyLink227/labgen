@@ -1,12 +1,15 @@
 #![allow(dead_code)]
 use rand;
 use rand::{thread_rng, Rng};
-use gif::{Frame, Encoder, Repeat};
-use std::borrow::Cow;
-use std::fs::File;
-use std::io::BufWriter;
-use std::ops::{Add, AddAssign};
-use std::path::Path;
+use gif::{Frame, Encoder, Repeat, DisposalMethod};
+use std::{
+    time::Instant,
+    borrow::Cow,
+fs::File,
+io::BufWriter,
+ops::{Add, AddAssign},
+path::Path
+};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct Point {
@@ -423,58 +426,71 @@ fn generate_gif(maze: &Grid, history: &[(Point, Direction)]) {
     let (width, height) = ((maze.width + 0) as u16 * cell_width + 1, (maze.height + 0) as u16 * cell_width + 1);
 
 
-    let mut state: Vec<u8> = vec![0; (width * height) as usize];
+    let state: Vec<u8> = vec![0; width as usize * height as usize];
+    let connected_cell: [u8; 2] = [1, 1];
+
     let mut image = File::create("./animation.gif").unwrap();
     let mut encoder = Encoder::new(&mut image, width, height, color_map).unwrap();
     encoder.set_repeat(Repeat::Infinite).unwrap();
 
-    for (pt, dir) in history {
-        // update buffer
-        state[((pt.x as u16 * cell_width + 1) + (pt.y as u16 * cell_width + 1) * width) as usize] = 1;
-        match dir {
-            Direction::None => {}
-            Direction::North => {
-                state[(
-                    (pt.x as u16 * cell_width + 1 + 0) +
-                    (pt.y as u16 * cell_width + 1 - 1) * width
-                ) as usize] = 1;
-            }
-            Direction::East => {
-                state[(
-                    (pt.x as u16 * cell_width + 1 + 1) +
-                    (pt.y as u16 * cell_width + 1 + 0) * width
-                ) as usize] = 1;
-            }
-            Direction::South => {
-                state[(
-                    (pt.x as u16 * cell_width + 1 + 0) +
-                    (pt.y as u16 * cell_width + 1 + 1) * width
-                ) as usize] = 1;
-            }
-            Direction::West => {
-                state[(
-                    (pt.x as u16 * cell_width + 1 - 1) +
-                    (pt.y as u16 * cell_width + 1 + 0) * width
-                ) as usize] = 1;
-            }
-        }
-
-
-        // generate and save frame
-        let mut frame = Frame::default();
-        frame.width = width;
-        frame.height = height;
-        frame.delay = 10;
-        frame.buffer = Cow::Borrowed(&state);
-        encoder.write_frame(&frame).unwrap();
-    }
-
-    // final frame with a higher delay
+    // initial frame to set background
     let mut frame = Frame::default();
     frame.width = width;
     frame.height = height;
-    frame.delay = 100;
+    frame.delay = 0;
     frame.buffer = Cow::Borrowed(&state);
+    encoder.write_frame(&frame).unwrap();
+
+    for (pt, dir) in history {
+        let mut frame = Frame::default();
+        frame.delay = 1;
+
+        // set dimensions and position of frame
+        match dir {
+            Direction::None => {
+                frame.width = 1;
+                frame.height = 1;
+                frame.top = pt.y as u16 * cell_width + 1 + 0;
+                frame.left = pt.x as u16 * cell_width + 1 + 0;
+            }
+            Direction::North => {
+                frame.width = 1;
+                frame.height = 2;
+                frame.top = pt.y as u16 * cell_width + 1 - 1;
+                frame.left = pt.x as u16 * cell_width + 1 + 0;
+            }
+            Direction::East => {
+                frame.width = 2;
+                frame.height = 1;
+                frame.top = pt.y as u16 * cell_width + 1 + 0;
+                frame.left = pt.x as u16 * cell_width + 1 + 0;
+            }
+            Direction::South => {
+                frame.width = 1;
+                frame.height = 2;
+                frame.top = pt.y as u16 * cell_width + 1 + 0;
+                frame.left = pt.x as u16 * cell_width + 1 + 0;
+            }
+            Direction::West => {
+                frame.width = 2;
+                frame.height = 1;
+                frame.top = pt.y as u16 * cell_width + 1 + 0;
+                frame.left = pt.x as u16 * cell_width + 1 - 1;
+            }
+        }
+
+        frame.buffer = Cow::Borrowed(&connected_cell);
+        frame.dispose = DisposalMethod::Keep;
+        encoder.write_frame(&frame).unwrap();
+    }
+
+    // final empty frame with a higher delay
+    let mut frame = Frame::default();
+    frame.width = 1;
+    frame.height = 1;
+    frame.dispose = DisposalMethod::Keep;
+    frame.delay = 100;
+    frame.buffer = Cow::Borrowed(&[0]);
     encoder.write_frame(&frame).unwrap();
 }
 
@@ -698,10 +714,18 @@ fn generate_noise(world_size: Vector2<u32>, grid_size: Vector2<u32>) -> Vec<f32>
 }
 
 fn main() {
-    let maze_size = Vector2 { x: 15, y: 15 };
+    let maze_size = Vector2 { x: 3, y: 3 };
     //generate_noise(maze_size, Vector2 { x: 7, y: 7 });
-    let (nodes, hist) = create_maze_prim(maze_size);
-    generate_gif(&nodes, &hist);
 
-    println!("Successfully Generated Maze");
+    let mut now = Instant::now();
+    let (nodes, hist) = create_maze_prim(maze_size);
+    let maze_time = now.elapsed();
+
+    now = Instant::now();
+    generate_gif(&nodes, &hist);
+    //generate_png(&nodes);
+    let image_time = now.elapsed();
+
+    // need to add proper 0 padding
+    println!("Elapsed time: maze {}.{:09.9}s, gif {}.{:09.9}s", maze_time.as_secs(), maze_time.as_nanos(), image_time.as_secs(), image_time.as_nanos());
 }
