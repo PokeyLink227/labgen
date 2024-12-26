@@ -420,14 +420,15 @@ fn gen_maze(size: Vector2<u32>) -> Grid {
 }
 
 fn generate_gif(maze: &Grid, history: &[(Point, Direction)]) {
-    let cell_width: u16 = 2;
+    let passage_width: u16 = 3;
+    let wall_width: u16 = 2;
+    let cell_width: u16 = passage_width + wall_width;
 
     let color_map = &[0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF];
-    let (width, height) = ((maze.width + 0) as u16 * cell_width + 1, (maze.height + 0) as u16 * cell_width + 1);
+    let (width, height) = (maze.width as u16 * cell_width + wall_width, maze.height as u16 * cell_width + wall_width);
 
-
-    let state: Vec<u8> = vec![0; width as usize * height as usize];
-    let connected_cell: [u8; 2] = [1, 1];
+    let empty_maze: Vec<u8> = vec![0; width as usize * height as usize];
+    let connected_cell: Vec<u8> = vec![1; (cell_width * cell_width) as usize];
 
     let mut image = File::create("./animation.gif").unwrap();
     let mut encoder = Encoder::new(&mut image, width, height, color_map).unwrap();
@@ -438,44 +439,44 @@ fn generate_gif(maze: &Grid, history: &[(Point, Direction)]) {
     frame.width = width;
     frame.height = height;
     frame.delay = 0;
-    frame.buffer = Cow::Borrowed(&state);
+    frame.buffer = Cow::Borrowed(&empty_maze);
     encoder.write_frame(&frame).unwrap();
 
     for (pt, dir) in history {
         let mut frame = Frame::default();
-        frame.delay = 1;
+        frame.delay = 20;
 
         // set dimensions and position of frame
         match dir {
             Direction::None => {
-                frame.width = 1;
-                frame.height = 1;
-                frame.top = pt.y as u16 * cell_width + 1 + 0;
-                frame.left = pt.x as u16 * cell_width + 1 + 0;
+                frame.width = passage_width;
+                frame.height = passage_width;
+                frame.top = pt.y as u16 * cell_width + wall_width;
+                frame.left = pt.x as u16 * cell_width + wall_width;
             }
             Direction::North => {
-                frame.width = 1;
-                frame.height = 2;
-                frame.top = pt.y as u16 * cell_width + 1 - 1;
-                frame.left = pt.x as u16 * cell_width + 1 + 0;
+                frame.width = passage_width;
+                frame.height = cell_width;
+                frame.top = pt.y as u16 * cell_width + 0;
+                frame.left = pt.x as u16 * cell_width + wall_width;
             }
             Direction::East => {
-                frame.width = 2;
-                frame.height = 1;
-                frame.top = pt.y as u16 * cell_width + 1 + 0;
-                frame.left = pt.x as u16 * cell_width + 1 + 0;
+                frame.width = cell_width;
+                frame.height = passage_width;
+                frame.top = pt.y as u16 * cell_width + wall_width;
+                frame.left = pt.x as u16 * cell_width + wall_width;
             }
             Direction::South => {
-                frame.width = 1;
-                frame.height = 2;
-                frame.top = pt.y as u16 * cell_width + 1 + 0;
-                frame.left = pt.x as u16 * cell_width + 1 + 0;
+                frame.width = passage_width;
+                frame.height = cell_width;
+                frame.top = pt.y as u16 * cell_width + wall_width;
+                frame.left = pt.x as u16 * cell_width + wall_width;
             }
             Direction::West => {
-                frame.width = 2;
-                frame.height = 1;
-                frame.top = pt.y as u16 * cell_width + 1 + 0;
-                frame.left = pt.x as u16 * cell_width + 1 - 1;
+                frame.width = cell_width;
+                frame.height = passage_width;
+                frame.top = pt.y as u16 * cell_width + wall_width;
+                frame.left = pt.x as u16 * cell_width + 0;
             }
         }
 
@@ -495,7 +496,7 @@ fn generate_gif(maze: &Grid, history: &[(Point, Direction)]) {
 }
 
 fn generate_png(maze: &Grid) {
-    let cell_width = 2;
+    let cell_width = 5;
     let image_dimensions = Vector2 {
         x: maze.width * cell_width + 1,
         y: maze.height * cell_width + 1,
@@ -718,12 +719,12 @@ fn main() {
     //generate_noise(maze_size, Vector2 { x: 7, y: 7 });
 
     let mut now = Instant::now();
-    let (nodes, hist) = create_maze_prim(maze_size);
+    let (nodes, hist) = create_maze_backtrack(maze_size);
     let maze_time = now.elapsed();
 
     now = Instant::now();
     generate_gif(&nodes, &hist);
-    //generate_png(&nodes);
+    generate_png(&nodes);
     let image_time = now.elapsed();
 
     // need to add proper 0 padding
