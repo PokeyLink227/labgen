@@ -1,17 +1,6 @@
-use gif::{Frame, Encoder, Repeat, DisposalMethod};
-use std::{
-    borrow::Cow,
-    fs::File,
-    io::BufWriter,
-    path::Path
-};
-use crate::maze::{
-    Point,
-    Direction,
-    ConnectionStatus,
-    Grid,
-    Vector2,
-};
+use crate::maze::{ConnectionStatus, Direction, Grid, Point, Vector2};
+use gif::{DisposalMethod, Encoder, Frame, Repeat};
+use std::{borrow::Cow, fs::File, io::BufWriter, path::Path};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct ColorRGB {
@@ -58,8 +47,10 @@ pub fn generate_gif_uncompressed(maze: &Grid, history: &[(Point, Direction)]) {
     let frame_time = 5;
 
     let color_map = &[0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF];
-    let (width, height) = (maze.width as u16 * cell_width + wall_width, maze.height as u16 * cell_width + wall_width);
-
+    let (width, height) = (
+        maze.width as u16 * cell_width + wall_width,
+        maze.height as u16 * cell_width + wall_width,
+    );
 
     let mut state: Vec<u8> = vec![0; width as usize * height as usize];
     let mut image = File::create("./animation.gif").unwrap();
@@ -111,7 +102,6 @@ pub fn generate_gif_uncompressed(maze: &Grid, history: &[(Point, Direction)]) {
             }
         }
 
-
         // generate and save frame
         let mut frame = Frame::default();
         frame.width = width;
@@ -137,7 +127,10 @@ pub fn generate_gif(maze: &Grid, history: &[(Point, Direction)]) {
     let frame_time = 5;
 
     let color_map = &[0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF];
-    let (width, height) = (maze.width as u16 * cell_width + wall_width, maze.height as u16 * cell_width + wall_width);
+    let (width, height) = (
+        maze.width as u16 * cell_width + wall_width,
+        maze.height as u16 * cell_width + wall_width,
+    );
 
     let empty_maze: Vec<u8> = vec![0; width as usize * height as usize];
     let connected_cell: Vec<u8> = vec![1; (cell_width * cell_width) as usize];
@@ -245,7 +238,9 @@ pub fn generate_png(maze: &Grid) {
                     x: x as i16,
                     y: y as i16,
                 })
-                .connections & Direction::North as u8 != 0
+                .connections
+                & Direction::North as u8
+                != 0
             {
                 pixels[((x * cell_width + 1) + ((y * cell_width + 0) * image_dimensions.x))
                     as usize] = ColorRGB {
@@ -259,7 +254,9 @@ pub fn generate_png(maze: &Grid) {
                     x: x as i16,
                     y: y as i16,
                 })
-                .connections & Direction::West as u8 != 0
+                .connections
+                & Direction::West as u8
+                != 0
             {
                 pixels[((x * cell_width + 0) + ((y * cell_width + 1) * image_dimensions.x))
                     as usize] = ColorRGB {

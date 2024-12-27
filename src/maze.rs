@@ -1,8 +1,6 @@
-use std::{
-    ops::{Add, AddAssign},
-};
 use rand;
 use rand::{thread_rng, Rng};
+use std::ops::{Add, AddAssign};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Point {
@@ -158,8 +156,7 @@ pub fn create_maze_backtrack(width: u32, height: u32) -> (Grid, Vec<(Point, Dire
 
     while !stack.is_empty() {
         let next = pick_random(
-            pos
-                .adjacent()
+            pos.adjacent()
                 .into_iter()
                 .enumerate()
                 .filter(|(_, x)| {

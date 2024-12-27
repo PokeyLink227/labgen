@@ -1,20 +1,9 @@
-use std::{
-    time::Instant,
+use crate::{
+    image::{generate_gif, generate_gif_uncompressed, generate_png},
+    maze::{create_maze_backtrack, create_maze_prim, gen_maze, Vector2},
 };
 use clap::Parser;
-use crate::{
-    maze::{
-        Vector2,
-        create_maze_prim,
-        create_maze_backtrack,
-        gen_maze,
-    },
-    image::{
-        generate_gif,
-        generate_gif_uncompressed,
-        generate_png,
-    },
-};
+use std::time::Instant;
 
 mod image;
 mod maze;
@@ -65,5 +54,11 @@ fn main() {
     let image_time = now.elapsed();
 
     // need to add proper 0 padding
-    println!("Elapsed time: maze {}.{:09.9}s, gif {}.{:09.9}s", maze_time.as_secs(), maze_time.as_nanos(), image_time.as_secs(), image_time.as_nanos());
+    println!(
+        "Elapsed time: maze {}.{:09.9}s, gif {}.{:09.9}s",
+        maze_time.as_secs(),
+        maze_time.as_nanos(),
+        image_time.as_secs(),
+        image_time.as_nanos()
+    );
 }
