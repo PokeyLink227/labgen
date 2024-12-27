@@ -201,7 +201,7 @@ pub fn generate_gif(maze: &Grid, history: &[(Point, Direction)]) {
 }
 
 pub fn generate_png(maze: &Grid) {
-    let cell_width = 5;
+    let cell_width = 2;
     let image_dimensions = Vector2 {
         x: maze.width * cell_width + 1,
         y: maze.height * cell_width + 1,

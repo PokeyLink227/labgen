@@ -135,14 +135,10 @@ fn pick_random(points: &[(usize, Point)]) -> Option<(usize, Point)> {
 }
 
 pub fn create_maze_backtrack(width: u32, height: u32) -> (Grid, Vec<(Point, Direction)>) {
-    let blank: Tile = Tile {
-        status: ConnectionStatus::UnVisited,
-        connections: Direction::None as u8,
-    };
     let num_tiles = width * height;
 
     let mut maze: Grid = Grid {
-        tiles: vec![blank; num_tiles as usize],
+        tiles: vec![Tile::default(); num_tiles as usize],
         width: width,
         height: height,
     };
@@ -188,14 +184,10 @@ pub fn create_maze_backtrack(width: u32, height: u32) -> (Grid, Vec<(Point, Dire
 }
 
 pub fn create_maze_prim(width: u32, height: u32) -> (Grid, Vec<(Point, Direction)>) {
-    let blank: Tile = Tile {
-        status: ConnectionStatus::UnVisited,
-        connections: Direction::None as u8,
-    };
     let num_tiles = width * height;
 
     let mut maze: Grid = Grid {
-        tiles: vec![blank; num_tiles as usize],
+        tiles: vec![Tile::default(); num_tiles as usize],
         width: width,
         height: height,
     };
@@ -238,6 +230,46 @@ pub fn create_maze_prim(width: u32, height: u32) -> (Grid, Vec<(Point, Direction
 
                 open_tiles.push(pos);
                 history.push((pos, opposite(dir).into()));
+            }
+        }
+    }
+
+    (maze, history)
+}
+
+pub fn create_maze_binary(width: u32, height: u32) -> (Grid, Vec<(Point, Direction)>) {
+    let num_tiles = width * height;
+    let mut maze: Grid = Grid {
+        tiles: vec![Tile::default(); num_tiles as usize],
+        width: width,
+        height: height,
+    };
+    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(num_tiles as usize);
+    let mut rng = thread_rng();
+
+    for y in 0..height {
+        for x in 0..width {
+            let dir: u8 =
+            if x > 0 && y > 0 {
+                rng.gen_range(0..=1)
+            } else if x > 0 {
+                0
+            } else if y > 0 {
+                1
+            } else {
+                2
+            };
+
+            if dir == 0 {
+                maze.get_tile_mut(Point {x: x as i16, y: y as i16}).connections |= Direction::West as u8;
+                history.push((Point { x: x as i16, y: y as i16 }, Direction::West));
+                maze.get_tile_mut(Point {x: (x - 1) as i16, y: y as i16}).connections |= Direction::East as u8;
+            } else if dir == 1 {
+                maze.get_tile_mut(Point {x: x as i16, y: y as i16}).connections |= Direction::North as u8;
+                history.push((Point { x: x as i16, y: y as i16 }, Direction::North));
+                maze.get_tile_mut(Point {x: x as i16, y: (y - 1) as i16}).connections |= Direction::South as u8;
+            } else {
+                history.push((Point { x: x as i16, y: y as i16 }, Direction::None));
             }
         }
     }

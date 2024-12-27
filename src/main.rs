@@ -1,6 +1,6 @@
 use crate::{
     image::{generate_gif, generate_gif_uncompressed, generate_png},
-    maze::{create_maze_backtrack, create_maze_prim, gen_maze, Vector2},
+    maze::{create_maze_backtrack, create_maze_binary, create_maze_prim, gen_maze, Vector2},
 };
 use clap::Parser;
 use std::time::Instant;
@@ -37,6 +37,7 @@ fn main() {
     let (nodes, hist) = match args.method {
         0 => create_maze_backtrack(args.width, args.height),
         1 => create_maze_prim(args.width, args.height),
+        2 => create_maze_binary(args.width, args.height),
         _ => create_maze_backtrack(args.width, args.height),
     };
     let maze_time = now.elapsed();
