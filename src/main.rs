@@ -11,6 +11,7 @@ use crate::{
     },
     image::{
         generate_gif,
+        generate_gif_uncompressed,
         generate_png,
     },
 };
@@ -35,6 +36,9 @@ struct Args {
 
     #[arg(short = 'a', long = "animate")]
     animate: bool,
+
+    #[arg(short = 'u', long = "uncompressed", default_value = "false")]
+    uncompressed: bool,
 }
 
 fn main() {
@@ -50,7 +54,11 @@ fn main() {
 
     now = Instant::now();
     if args.animate {
-        generate_gif(&nodes, &hist);
+        if args.uncompressed {
+            generate_gif_uncompressed(&nodes, &hist);
+        } else {
+            generate_gif(&nodes, &hist);
+        }
     } else {
         generate_png(&nodes);
     }

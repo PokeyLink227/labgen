@@ -44,10 +44,97 @@ fn get_color(val: f32) -> ColorRGB {
     }
 }
 
-pub fn generate_gif(maze: &Grid, history: &[(Point, Direction)]) {
-    let passage_width: u16 = 1;
-    let wall_width: u16 = 4;
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct ImageOptions {
+    passage_width: u16,
+    wall_width: u16,
+    frame_time: u16,
+}
+
+pub fn generate_gif_uncompressed(maze: &Grid, history: &[(Point, Direction)]) {
+    let passage_width: u16 = 9;
+    let wall_width: u16 = 3;
     let cell_width: u16 = passage_width + wall_width;
+    let frame_time = 5;
+
+    let color_map = &[0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF];
+    let (width, height) = (maze.width as u16 * cell_width + wall_width, maze.height as u16 * cell_width + wall_width);
+
+
+    let mut state: Vec<u8> = vec![0; width as usize * height as usize];
+    let mut image = File::create("./animation.gif").unwrap();
+    let mut encoder = Encoder::new(&mut image, width, height, color_map).unwrap();
+    encoder.set_repeat(Repeat::Infinite).unwrap();
+
+    for (pt, dir) in history {
+        let area_top: u16;
+        let area_left: u16;
+        let area_width: u16;
+        let area_height: u16;
+
+        match dir {
+            Direction::None => {
+                area_width = passage_width;
+                area_height = passage_width;
+                area_top = pt.y as u16 * cell_width + wall_width;
+                area_left = pt.x as u16 * cell_width + wall_width;
+            }
+            Direction::North => {
+                area_width = passage_width;
+                area_height = cell_width;
+                area_top = pt.y as u16 * cell_width + 0;
+                area_left = pt.x as u16 * cell_width + wall_width;
+            }
+            Direction::East => {
+                area_width = cell_width;
+                area_height = passage_width;
+                area_top = pt.y as u16 * cell_width + wall_width;
+                area_left = pt.x as u16 * cell_width + wall_width;
+            }
+            Direction::South => {
+                area_width = passage_width;
+                area_height = cell_width;
+                area_top = pt.y as u16 * cell_width + wall_width;
+                area_left = pt.x as u16 * cell_width + wall_width;
+            }
+            Direction::West => {
+                area_width = cell_width;
+                area_height = passage_width;
+                area_top = pt.y as u16 * cell_width + wall_width;
+                area_left = pt.x as u16 * cell_width + 0;
+            }
+        }
+
+        for y in area_top..(area_top + area_height) {
+            for x in area_left..(area_left + area_width) {
+                state[x as usize + (y as usize * width as usize)] = 1;
+            }
+        }
+
+
+        // generate and save frame
+        let mut frame = Frame::default();
+        frame.width = width;
+        frame.height = height;
+        frame.delay = 10;
+        frame.buffer = Cow::Borrowed(&state);
+        encoder.write_frame(&frame).unwrap();
+    }
+
+    // final frame with a higher delay
+    let mut frame = Frame::default();
+    frame.width = width;
+    frame.height = height;
+    frame.delay = 100;
+    frame.buffer = Cow::Borrowed(&state);
+    encoder.write_frame(&frame).unwrap();
+}
+
+pub fn generate_gif(maze: &Grid, history: &[(Point, Direction)]) {
+    let passage_width: u16 = 9;
+    let wall_width: u16 = 3;
+    let cell_width: u16 = passage_width + wall_width;
+    let frame_time = 5;
 
     let color_map = &[0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF];
     let (width, height) = (maze.width as u16 * cell_width + wall_width, maze.height as u16 * cell_width + wall_width);
@@ -69,7 +156,7 @@ pub fn generate_gif(maze: &Grid, history: &[(Point, Direction)]) {
 
     for (pt, dir) in history {
         let mut frame = Frame::default();
-        frame.delay = 20;
+        frame.delay = frame_time;
 
         // set dimensions and position of frame
         match dir {
