@@ -1,4 +1,4 @@
-use crate::maze::{ConnectionStatus, Direction, Grid, Point, Vector2};
+use crate::maze::{ConnectionStatus, Direction, Grid, Point};
 use gif::{DisposalMethod, Encoder, Frame, Repeat};
 use std::{borrow::Cow, fs::File, io::BufWriter, path::Path};
 
@@ -46,7 +46,12 @@ pub struct AnimationOptions {
     pub pause_time: u16,
 }
 
-pub fn generate_gif_uncompressed(maze: &Grid, history: &[(Point, Direction)], opts: &ImageOptions, ani_opts: &AnimationOptions) {
+pub fn generate_gif_uncompressed(
+    maze: &Grid,
+    history: &[(Point, Direction)],
+    opts: &ImageOptions,
+    ani_opts: &AnimationOptions,
+) {
     let cell_width: u16 = opts.passage_width + opts.wall_width;
 
     let (width, height) = (
@@ -122,7 +127,12 @@ pub fn generate_gif_uncompressed(maze: &Grid, history: &[(Point, Direction)], op
     encoder.write_frame(&frame).unwrap();
 }
 
-pub fn generate_gif(maze: &Grid, history: &[(Point, Direction)], opts: &ImageOptions, ani_opts: &AnimationOptions) {
+pub fn generate_gif(
+    maze: &Grid,
+    history: &[(Point, Direction)],
+    opts: &ImageOptions,
+    ani_opts: &AnimationOptions,
+) {
     let cell_width: u16 = opts.passage_width + opts.wall_width;
 
     let (width, height) = (
@@ -227,69 +237,43 @@ pub fn generate_png(maze: &Grid, opts: &ImageOptions) {
 
     let mut writer = encoder.write_header().unwrap();
 
-    let mut pixels: Vec<ColorRGB> =
-        vec![color_map[0]; width as usize * height as usize];
+    let mut pixels: Vec<ColorRGB> = vec![color_map[0]; width as usize * height as usize];
 
     for py in 0..maze.height {
         for px in 0..maze.width {
             let top: u16 = py as u16 * cell_width + opts.wall_width;
             let left: u16 = px as u16 * cell_width + opts.wall_width;
-            let connections = maze.get_tile(Point { x: px as i16, y: py as i16 }).connections;
+            let connections = maze
+                .get_tile(Point {
+                    x: px as i16,
+                    y: py as i16,
+                })
+                .connections;
 
             for y in 0..opts.passage_width {
                 for x in 0..opts.passage_width {
-                    pixels[(x + left) as usize + ((y + top) as usize * width as usize)] = color_map[1];
+                    pixels[(x + left) as usize + ((y + top) as usize * width as usize)] =
+                        color_map[1];
                 }
             }
             if connections & Direction::East as u8 != 0 {
                 for y in 0..opts.passage_width {
                     for x in opts.passage_width..cell_width {
-                        pixels[(x + left) as usize + ((y + top) as usize * width as usize)] = color_map[1];
+                        pixels[(x + left) as usize + ((y + top) as usize * width as usize)] =
+                            color_map[1];
                     }
                 }
             }
             if connections & Direction::South as u8 != 0 {
                 for y in opts.passage_width..cell_width {
                     for x in 0..opts.passage_width {
-                        pixels[(x + left) as usize + ((y + top) as usize * width as usize)] = color_map[1];
+                        pixels[(x + left) as usize + ((y + top) as usize * width as usize)] =
+                            color_map[1];
                     }
                 }
             }
         }
     }
-
-    /*
-    for y in 0..maze.height {
-        for x in 0..maze.width {
-            pixels[((x * cell_width + 1) + ((y * cell_width + 1) * image_dimensions.x)) as usize] =
-                color_map[1];
-            if maze
-                .get_tile(Point {
-                    x: x as i16,
-                    y: y as i16,
-                })
-                .connections
-                & Direction::North as u8
-                != 0
-            {
-                pixels[((x * cell_width + 1) + ((y * cell_width + 0) * image_dimensions.x))
-                    as usize] = color_map[1];
-            }
-            if maze
-                .get_tile(Point {
-                    x: x as i16,
-                    y: y as i16,
-                })
-                .connections
-                & Direction::West as u8
-                != 0
-            {
-                pixels[((x * cell_width + 0) + ((y * cell_width + 1) * image_dimensions.x))
-                    as usize] = color_map[1];
-            }
-        }
-    }
-    */
 
     writer
         .write_image_data(&ColorRGB::as_bytes(&pixels))

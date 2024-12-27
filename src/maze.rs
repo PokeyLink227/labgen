@@ -38,18 +38,9 @@ impl Point {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Vector2<T> {
-    pub x: T,
-    pub y: T,
-}
-
-impl Vector2<u32> {
-    fn add_offset(&self, other: Vector2<i32>) -> Vector2<u32> {
-        Vector2 {
-            x: ((self.x as i32) + other.x) as u32,
-            y: ((self.y as i32) + other.y) as u32,
-        }
-    }
+struct Vector2<T> {
+    x: T,
+    y: T,
 }
 
 impl Vector2<f32> {
@@ -324,27 +315,30 @@ fn normalize(v: Vector2<f32>) -> Vector2<f32> {
     }
 }
 
-fn generate_noise(world_size: Vector2<u32>, grid_size: Vector2<u32>) -> Vec<f32> {
+fn generate_noise(
+    world_width: u32,
+    world_height: u32,
+    grid_width: u32,
+    grid_height: u32,
+) -> Vec<f32> {
     // can over-estimate length and be fine
-    let cell_size: Vector2<u32> = Vector2 {
-        x: if world_size.x % (grid_size.x - 1) == 0 {
-            world_size.x / (grid_size.x - 1)
-        } else {
-            world_size.x / (grid_size.x - 1) + 1
-        },
-        y: if world_size.y % (grid_size.y - 1) == 0 {
-            world_size.y / (grid_size.y - 1)
-        } else {
-            world_size.y / (grid_size.y - 1) + 1
-        },
+    let cell_width = if world_width % (grid_width - 1) == 0 {
+        world_width / (grid_width - 1)
+    } else {
+        world_width / (grid_width - 1) + 1
+    };
+    let cell_height = if world_height % (grid_height - 1) == 0 {
+        world_height / (grid_height - 1)
+    } else {
+        world_height / (grid_height - 1) + 1
     };
 
     let mut rng = thread_rng();
-    let mut points: Vec<f32> = vec![0.0f32; (world_size.x * world_size.y) as usize];
-    let mut grid: Vec<Vector2<f32>> = Vec::with_capacity((grid_size.x * grid_size.y) as usize);
+    let mut points: Vec<f32> = vec![0.0f32; (world_width * world_height) as usize];
+    let mut grid: Vec<Vector2<f32>> = Vec::with_capacity((grid_width * grid_height) as usize);
 
     // fill grid with random direction vectors
-    for _ in 0..(grid_size.x * grid_size.y) {
+    for _ in 0..(grid_width * grid_height) {
         grid.push(normalize(Vector2 {
             x: rng.gen_range(-1.0..=1.0),
             y: rng.gen_range(-1.0..=1.0),
@@ -352,15 +346,15 @@ fn generate_noise(world_size: Vector2<u32>, grid_size: Vector2<u32>) -> Vec<f32>
     }
 
     // calculate perlin noise for each point in the world
-    for y in 0..world_size.y {
-        for x in 0..world_size.x {
+    for y in 0..world_height {
+        for x in 0..world_width {
             let grid_offset = Vector2 {
-                x: x % cell_size.x,
-                y: y % cell_size.y,
+                x: x % cell_width,
+                y: y % cell_height,
             };
             let grid_pos = Vector2 {
-                x: x / cell_size.x,
-                y: y / cell_size.y,
+                x: x / cell_width,
+                y: y / cell_height,
             };
 
             // offset vectors from each nearby grid point to current world point
@@ -370,43 +364,43 @@ fn generate_noise(world_size: Vector2<u32>, grid_size: Vector2<u32>) -> Vec<f32>
                     y: ((grid_offset.y) as f32),
                 },
                 Vector2 {
-                    x: -((cell_size.x - grid_offset.x) as f32),
+                    x: -((cell_width - grid_offset.x) as f32),
                     y: ((grid_offset.y) as f32),
                 },
                 Vector2 {
                     x: ((grid_offset.x) as f32),
-                    y: -((cell_size.y - grid_offset.y) as f32),
+                    y: -((cell_height - grid_offset.y) as f32),
                 },
                 Vector2 {
-                    x: -((cell_size.x - grid_offset.x) as f32),
-                    y: -((cell_size.y - grid_offset.y) as f32),
+                    x: -((cell_width - grid_offset.x) as f32),
+                    y: -((cell_height - grid_offset.y) as f32),
                 },
             ];
 
             // dot product of each offset vector and its respective direction vector
             let dots: [f32; 4] = [
                 Vector2::dot(
-                    grid[((grid_pos.x + 0) + (grid_pos.y + 0) * grid_size.x) as usize],
+                    grid[((grid_pos.x + 0) + (grid_pos.y + 0) * grid_width) as usize],
                     offset_vectors[0],
                 ),
                 Vector2::dot(
-                    grid[((grid_pos.x + 1) + (grid_pos.y + 0) * grid_size.x) as usize],
+                    grid[((grid_pos.x + 1) + (grid_pos.y + 0) * grid_width) as usize],
                     offset_vectors[1],
                 ),
                 Vector2::dot(
-                    grid[((grid_pos.x + 0) + (grid_pos.y + 1) * grid_size.x) as usize],
+                    grid[((grid_pos.x + 0) + (grid_pos.y + 1) * grid_width) as usize],
                     offset_vectors[2],
                 ),
                 Vector2::dot(
-                    grid[((grid_pos.x + 1) + (grid_pos.y + 1) * grid_size.x) as usize],
+                    grid[((grid_pos.x + 1) + (grid_pos.y + 1) * grid_width) as usize],
                     offset_vectors[3],
                 ),
             ];
 
             // calculate step for interpolation
             let step = Vector2 {
-                x: (grid_offset.x as f32) / (cell_size.x as f32),
-                y: (grid_offset.y as f32) / (cell_size.y as f32),
+                x: (grid_offset.x as f32) / (cell_width as f32),
+                y: (grid_offset.y as f32) / (cell_height as f32),
             };
 
             // interpolate over x and y direction
@@ -415,7 +409,7 @@ fn generate_noise(world_size: Vector2<u32>, grid_size: Vector2<u32>) -> Vec<f32>
             let int_y = interpolate(int_x1, int_x2, step.y);
 
             // dot product will range from -cell_width to cell_width
-            points[(x + y * world_size.x) as usize] = int_y / (cell_size.x as f32) * 1.5;
+            points[(x + y * world_width) as usize] = int_y / (cell_width as f32) * 1.5;
         }
     }
 
@@ -428,7 +422,7 @@ fn generate_noise(world_size: Vector2<u32>, grid_size: Vector2<u32>) -> Vec<f32>
     let file = File::create(path).unwrap();
     let ref mut w = BufWriter::new(file);
 
-    let mut encoder = png::Encoder::new(w, world_size.x as u32, world_size.y as u32);
+    let mut encoder = png::Encoder::new(w, world_width as u32, world_height as u32);
     encoder.set_color(png::ColorType::Rgb);
 
     let mut writer = encoder.write_header().unwrap();
@@ -439,10 +433,10 @@ fn generate_noise(world_size: Vector2<u32>, grid_size: Vector2<u32>) -> Vec<f32>
             green: 0,
             blue: 0
         };
-        (world_size.x * world_size.y) as usize
+        (world_width * world_height) as usize
     ];
 
-    for i in 0..(world_size.x * world_size.y) as usize {
+    for i in 0..(world_width * world_height) as usize {
         pixels[i] = get_color(points[i]);
     }
 
@@ -556,25 +550,25 @@ fn flood_tile_backtrack(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point) {
     }
 }
 
-pub fn gen_maze(size: Vector2<u32>) -> Grid {
+pub fn gen_maze(width: u32, height: u32) -> (Grid, Vec<(Point, Direction)>) {
     let mut maze = Grid {
         tiles: vec![
             Tile {
                 status: ConnectionStatus::UnVisited,
                 connections: 0,
             };
-            (size.x * size.y) as usize
+            width as usize * height as usize
         ],
-        width: size.x,
-        height: size.y,
+        width: width,
+        height: height,
     };
-    let noise_map: Vec<u8> = generate_noise(size, Vector2 { x: 7, y: 7 })
+    let noise_map: Vec<u8> = generate_noise(width, height, 7, 7)
         .iter()
         .map(|x| if *x < 0.0 { 0 } else { 1 })
         .collect();
 
-    for y in 0..size.y as i16 {
-        for x in 0..size.x as i16 {
+    for y in 0..height as i16 {
+        for x in 0..width as i16 {
             flood_tile_prim(&mut maze, &noise_map, Point { x, y });
             flood_tile_backtrack(&mut maze, &noise_map, Point { x, y });
         }
@@ -584,5 +578,5 @@ pub fn gen_maze(size: Vector2<u32>) -> Grid {
         need to add random stopping and then also implement connecting of maze regions
     */
 
-    maze
+    (maze, Vec::new())
 }

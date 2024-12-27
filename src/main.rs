@@ -1,6 +1,8 @@
 use crate::{
-    image::{generate_gif, generate_gif_uncompressed, generate_png, ImageOptions, AnimationOptions},
-    maze::{create_maze_backtrack, create_maze_binary, create_maze_prim, gen_maze, Vector2},
+    image::{
+        generate_gif, generate_gif_uncompressed, generate_png, AnimationOptions, ImageOptions,
+    },
+    maze::{create_maze_backtrack, create_maze_binary, create_maze_prim, gen_maze},
 };
 use clap::Parser;
 use std::time::Instant;
@@ -38,6 +40,7 @@ fn main() {
         0 => create_maze_backtrack(args.width, args.height),
         1 => create_maze_prim(args.width, args.height),
         2 => create_maze_binary(args.width, args.height),
+        3 => gen_maze(args.width, args.height),
         _ => create_maze_backtrack(args.width, args.height),
     };
     let maze_time = now.elapsed();
@@ -64,7 +67,6 @@ fn main() {
     }
     let image_time = now.elapsed();
 
-    // need to add proper 0 padding
     println!(
         "Elapsed time: maze {}.{:09.9}s, gif {}.{:09.9}s",
         maze_time.as_secs(),
