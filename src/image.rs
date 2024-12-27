@@ -53,7 +53,7 @@ pub fn generate_gif_uncompressed(maze: &Grid, history: &[(Point, Direction)]) {
     );
 
     let mut state: Vec<u8> = vec![0; width as usize * height as usize];
-    let mut image = File::create("./animation.gif").unwrap();
+    let mut image = BufWriter::new(File::create("./animation.gif").unwrap());
     let mut encoder = Encoder::new(&mut image, width, height, color_map).unwrap();
     encoder.set_repeat(Repeat::Infinite).unwrap();
 
@@ -135,7 +135,7 @@ pub fn generate_gif(maze: &Grid, history: &[(Point, Direction)]) {
     let empty_maze: Vec<u8> = vec![0; width as usize * height as usize];
     let connected_cell: Vec<u8> = vec![1; (cell_width * cell_width) as usize];
 
-    let mut image = File::create("./animation.gif").unwrap();
+    let mut image = BufWriter::new(File::create("./animation.gif").unwrap());
     let mut encoder = Encoder::new(&mut image, width, height, color_map).unwrap();
     encoder.set_repeat(Repeat::Infinite).unwrap();
 
