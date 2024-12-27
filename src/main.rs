@@ -1,5 +1,5 @@
 use crate::{
-    image::{generate_gif, generate_gif_uncompressed, generate_png},
+    image::{generate_gif, generate_gif_uncompressed, generate_png, ImageOptions, AnimationOptions},
     maze::{create_maze_backtrack, create_maze_binary, create_maze_prim, gen_maze, Vector2},
 };
 use clap::Parser;
@@ -43,14 +43,24 @@ fn main() {
     let maze_time = now.elapsed();
 
     now = Instant::now();
+    let opts = ImageOptions {
+        passage_width: 3,
+        wall_width: 1,
+        color_map: [0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF],
+    };
+    let ani_opts = AnimationOptions {
+        frame_time: 2,
+        pause_time: 100,
+    };
+
     if args.animate {
         if args.uncompressed {
-            generate_gif_uncompressed(&nodes, &hist);
+            generate_gif_uncompressed(&nodes, &hist, &opts, &ani_opts);
         } else {
-            generate_gif(&nodes, &hist);
+            generate_gif(&nodes, &hist, &opts, &ani_opts);
         }
     } else {
-        generate_png(&nodes);
+        generate_png(&nodes, &opts);
     }
     let image_time = now.elapsed();
 
