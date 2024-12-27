@@ -44,7 +44,7 @@ pub fn generate_gif_uncompressed(maze: &Grid, history: &[(Point, Direction)]) {
     let passage_width: u16 = 9;
     let wall_width: u16 = 3;
     let cell_width: u16 = passage_width + wall_width;
-    let frame_time = 5;
+    let frame_time = 2;
 
     let color_map = &[0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF];
     let (width, height) = (
@@ -106,7 +106,7 @@ pub fn generate_gif_uncompressed(maze: &Grid, history: &[(Point, Direction)]) {
         let mut frame = Frame::default();
         frame.width = width;
         frame.height = height;
-        frame.delay = 10;
+        frame.delay = frame_time;
         frame.buffer = Cow::Borrowed(&state);
         encoder.write_frame(&frame).unwrap();
     }
