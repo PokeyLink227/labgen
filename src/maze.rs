@@ -301,6 +301,92 @@ pub fn create_maze_binary(width: u32, height: u32) -> (Grid, Vec<(Point, Directi
     (maze, history)
 }
 
+pub fn create_maze_sidewinder(width: u32, height: u32) -> (Grid, Vec<(Point, Direction)>) {
+    let num_tiles = width * height;
+    let mut maze: Grid = Grid {
+        tiles: vec![Tile::default(); num_tiles as usize],
+        width: width,
+        height: height,
+    };
+    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(num_tiles as usize);
+    let mut rng = thread_rng();
+
+
+    maze.get_tile_mut(Point {
+        x: 0,
+        y: 0,
+    }).connections |= Direction::East as u8;
+    history.push((Point {
+        x: 0,
+        y: 0,
+    },
+    Direction::None));
+
+    for x in 1..(width - 1) {
+        maze.get_tile_mut(Point {
+            x: x as i16,
+            y: 0,
+        }).connections |= Direction::East as u8 | Direction::West as u8;
+        history.push((Point {
+            x: x as i16,
+            y: 0,
+        },
+        Direction::West));
+    }
+
+    maze.get_tile_mut(Point {
+        x: (width - 1) as i16,
+        y: 0,
+    }).connections |= Direction::West as u8;
+    history.push((Point {
+        x: (width - 1) as i16,
+        y: 0,
+    },
+    Direction::West));
+
+    for y in 1..height {
+        let mut range_start: u32 = 0;
+        for x in 0..width {
+            if rng.gen::<bool>() && x < width - 1 {
+                maze.get_tile_mut(Point {
+                    x: x as i16,
+                    y: y as i16,
+                }).connections |= Direction::East as u8;
+                maze.get_tile_mut(Point {
+                    x: (x + 1) as i16,
+                    y: y as i16,
+                }).connections |= Direction::West as u8;
+                history.push((Point {
+                    x: x as i16,
+                    y: y as i16,
+                },
+                Direction::West));
+            } else {
+                if y > 0 {
+                    let chosen = rng.gen_range(range_start..=x);
+                    maze.get_tile_mut(Point {
+                        x: chosen as i16,
+                        y: y as i16,
+                    }).connections |= Direction::North as u8;
+                    maze.get_tile_mut(Point {
+                        x: chosen as i16,
+                        y: (y - 1) as i16,
+                    }).connections |= Direction::South as u8;
+                    history.push((Point {
+                        x: chosen as i16,
+                        y: y as i16,
+                    },
+                    Direction::North));
+                }
+
+                range_start = x + 1;
+            }
+        }
+    }
+
+    (maze, history)
+}
+
 fn interpolate(a: f32, b: f32, s: f32) -> f32 {
     // a + (b - a) * s
     // a + (b - a) * s * s * (3.0 - s * 2.0)
