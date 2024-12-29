@@ -55,8 +55,8 @@ pub fn generate_gif_uncompressed(
     let cell_width: u16 = opts.passage_width + opts.wall_width;
 
     let (width, height) = (
-        maze.width as u16 * cell_width + opts.wall_width,
-        maze.height as u16 * cell_width + opts.wall_width,
+        maze.width * cell_width + opts.wall_width,
+        maze.height * cell_width + opts.wall_width,
     );
 
     let mut state: Vec<u8> = vec![0; width as usize * height as usize];
@@ -71,7 +71,7 @@ pub fn generate_gif_uncompressed(
         let area_height: u16;
 
         match dir {
-            Direction::None => {
+            Direction::DirNone => {
                 area_width = opts.passage_width;
                 area_height = opts.passage_width;
                 area_top = pt.y as u16 * cell_width + opts.wall_width;
@@ -136,8 +136,8 @@ pub fn generate_gif(
     let cell_width: u16 = opts.passage_width + opts.wall_width;
 
     let (width, height) = (
-        maze.width as u16 * cell_width + opts.wall_width,
-        maze.height as u16 * cell_width + opts.wall_width,
+        maze.width * cell_width + opts.wall_width,
+        maze.height * cell_width + opts.wall_width,
     );
 
     let empty_maze: Vec<u8> = vec![0; width as usize * height as usize];
@@ -161,7 +161,7 @@ pub fn generate_gif(
 
         // set dimensions and position of frame
         match dir {
-            Direction::None => {
+            Direction::DirNone => {
                 frame.width = opts.passage_width;
                 frame.height = opts.passage_width;
                 frame.top = pt.y as u16 * cell_width + opts.wall_width;
@@ -211,8 +211,8 @@ pub fn generate_gif(
 pub fn generate_png(maze: &Grid, opts: &ImageOptions) {
     let cell_width: u16 = opts.passage_width + opts.wall_width;
     let (width, height) = (
-        maze.width as u16 * cell_width + opts.wall_width,
-        maze.height as u16 * cell_width + opts.wall_width,
+        maze.width * cell_width + opts.wall_width,
+        maze.height * cell_width + opts.wall_width,
     );
 
     let color_map = &[

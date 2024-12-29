@@ -2,7 +2,7 @@ use crate::{
     image::{
         generate_gif, generate_gif_uncompressed, generate_png, AnimationOptions, ImageOptions,
     },
-    maze::{create_maze_backtrack, create_maze_binary, create_maze_sidewinder, create_maze_prim, gen_maze},
+    maze::{generate_maze, MazeType},
 };
 use clap::Parser;
 use std::time::Instant;
@@ -14,13 +14,13 @@ mod maze;
 #[command(version, about, long_about = None)]
 struct Args {
     #[arg()]
-    width: u32,
+    width: u16,
 
     #[arg()]
-    height: u32,
+    height: u16,
 
     #[arg(short = 'm', long = "method", default_value = "0")]
-    method: u8,
+    method: MazeType,
 
     #[arg(short = 'o', long = "out", value_name = "output file", id = "out")]
     destination_file: Option<String>,
@@ -36,14 +36,7 @@ fn main() {
     let args = Args::parse();
 
     let mut now = Instant::now();
-    let (nodes, hist) = match args.method {
-        0 => create_maze_backtrack(args.width, args.height),
-        1 => create_maze_prim(args.width, args.height),
-        2 => create_maze_binary(args.width, args.height),
-        3 => create_maze_sidewinder(args.width, args.height),
-        4 => gen_maze(args.width, args.height),
-        _ => create_maze_backtrack(args.width, args.height),
-    };
+    let (nodes, hist) = generate_maze(args.width, args.height, args.method);
     let maze_time = now.elapsed();
 
     now = Instant::now();
