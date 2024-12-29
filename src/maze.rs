@@ -360,24 +360,34 @@ pub fn create_maze_sidewinder(width: u32, height: u32) -> (Grid, Vec<(Point, Dir
                     x: x as i16,
                     y: y as i16,
                 },
-                Direction::West));
+                Direction::East));
             } else {
-                if y > 0 {
-                    let chosen = rng.gen_range(range_start..=x);
-                    maze.get_tile_mut(Point {
-                        x: chosen as i16,
-                        y: y as i16,
-                    }).connections |= Direction::North as u8;
-                    maze.get_tile_mut(Point {
-                        x: chosen as i16,
-                        y: (y - 1) as i16,
-                    }).connections |= Direction::South as u8;
+                if maze.get_tile(Point {
+                    x: x as i16,
+                    y: y as i16,
+                }).connections & Direction::West as u8 != 0 {
                     history.push((Point {
-                        x: chosen as i16,
+                        x: x as i16,
                         y: y as i16,
                     },
-                    Direction::North));
+                    Direction::West));
                 }
+
+                let chosen = rng.gen_range(range_start..=x);
+                maze.get_tile_mut(Point {
+                    x: chosen as i16,
+                    y: y as i16,
+                }).connections |= Direction::North as u8;
+                maze.get_tile_mut(Point {
+                    x: chosen as i16,
+                    y: (y - 1) as i16,
+                }).connections |= Direction::South as u8;
+                history.push((Point {
+                    x: chosen as i16,
+                    y: y as i16,
+                },
+                Direction::North));
+
 
                 range_start = x + 1;
             }
