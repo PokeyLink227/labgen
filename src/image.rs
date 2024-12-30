@@ -71,7 +71,7 @@ pub fn generate_gif_uncompressed(
         let area_height: u16;
 
         match dir {
-            Direction::DirNone => {
+            Direction::NoDir => {
                 area_width = opts.passage_width;
                 area_height = opts.passage_width;
                 area_top = pt.y as u16 * cell_width + opts.wall_width;
@@ -161,7 +161,7 @@ pub fn generate_gif(
 
         // set dimensions and position of frame
         match dir {
-            Direction::DirNone => {
+            Direction::NoDir => {
                 frame.width = opts.passage_width;
                 frame.height = opts.passage_width;
                 frame.top = pt.y as u16 * cell_width + opts.wall_width;
