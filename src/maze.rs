@@ -28,7 +28,7 @@ impl AddAssign for Point {
 }
 
 impl Point {
-    fn adjacent(self) -> [Point; 4] {
+    pub fn adjacent(self) -> [Point; 4] {
         [
             self + Point { x: 0, y: -1 },
             self + Point { x: 1, y: 0 },
@@ -37,7 +37,17 @@ impl Point {
         ]
     }
 
-    fn new(x: i16, y: i16) -> Self {
+    pub fn travel(self, dir: Direction) -> Self {
+        match dir {
+            Direction::NoDir => self,
+            Direction::North => self + Point { x: 0, y: -1 },
+            Direction::East => self + Point { x: 1, y: 0 },
+            Direction::South => self + Point { x: 0, y: 1 },
+            Direction::West => self + Point { x: -1, y: 0 },
+        }
+    }
+
+    pub fn new(x: i16, y: i16) -> Self {
         Self { x, y }
     }
 }
@@ -72,6 +82,7 @@ pub enum MazeType {
     Sidewinder,
     Noise,
     GrowingTree,
+    Wilson,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -110,6 +121,10 @@ impl Tile {
     pub fn connected(&self, dir: Direction) -> bool {
         self.connections & dir as u8 != 0
     }
+
+    pub fn set_connected(&mut self, dir: Direction) {
+        self.connections = dir as u8;
+    }
 }
 
 #[derive(Debug)]
@@ -126,17 +141,17 @@ impl Grid {
 
     pub fn get_tile(&self, pos: Point) -> Tile {
         assert!(self.contains(pos));
-        self.tiles[(pos.x as u16 + pos.y as u16 * self.width) as usize]
+        self.tiles[pos.x as usize + pos.y as usize * self.width as usize]
     }
 
     pub fn get_tile_mut(&mut self, pos: Point) -> &mut Tile {
         assert!(self.contains(pos));
-        &mut self.tiles[(pos.x as u16 + pos.y as u16 * self.width) as usize]
+        &mut self.tiles[pos.x as usize + pos.y as usize * self.width as usize]
     }
 
     pub fn set_tile(&mut self, pos: Point, new: Tile) {
         assert!(self.contains(pos));
-        self.tiles[(pos.x as u16 + pos.y as u16 * self.width) as usize] = new;
+        self.tiles[pos.x as usize + pos.y as usize * self.width as usize] = new;
     }
 }
 
@@ -171,6 +186,7 @@ pub fn generate_maze(
         MazeType::Sidewinder => create_maze_sidewinder(maze, rng),
         MazeType::Noise => create_maze_noise(maze, rng),
         MazeType::GrowingTree => create_maze_growingtree(maze, rng, GrowingTreeBias::Percent(10)),
+        MazeType::Wilson => create_maze_wilson(maze, rng),
     }
 }
 
@@ -418,6 +434,76 @@ fn create_maze_growingtree(
                 history.push((selected, opposite(dir).into()));
             }
         }
+    }
+
+    (maze, history)
+}
+
+fn create_maze_wilson(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Direction)>) {
+    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
+    let mut reservoir: Vec<Point> = Vec::with_capacity(maze.tiles.len());
+    let mut cells_added = 0;
+
+    // generate reservoir
+    for y in 0..maze.height as i16 {
+        for x in 0..maze.width as i16 {
+            reservoir.push(Point::new(x, y));
+        }
+    }
+    for i in 0..reservoir.len() {
+        let index = rng.gen_range(i..reservoir.len());
+        let temp = reservoir[i];
+        reservoir[i] = reservoir[index];
+        reservoir[index] = temp;
+    }
+
+    let mut anchor = reservoir.pop().unwrap();
+    maze.get_tile_mut(anchor).status = ConnectionStatus::InMaze;
+    history.push((anchor, Direction::NoDir));
+
+    'outer: while !reservoir.is_empty() {
+        // pick a cell not already in the maze
+        while maze.get_tile(anchor).status == ConnectionStatus::InMaze {
+            anchor = match reservoir.pop() {
+                Some(v) => v,
+                None => break 'outer,
+            }
+        }
+        let mut pos = anchor;
+
+        // start a random loop erased walk from the chosen cell
+        maze.get_tile_mut(pos).status = ConnectionStatus::Visited;
+        while maze.get_tile(pos).status != ConnectionStatus::InMaze {
+            let next = pick_random(
+                pos.adjacent()
+                    .into_iter()
+                    .enumerate()
+                    .filter(|(_, x)| maze.contains(*x))
+                    .collect::<Vec<(usize, Point)>>()
+                    .as_ref(),
+                rng,
+            )
+            .unwrap(); // safe to unwrap because a cell will always have at least 2 adjacent cells in the maze
+
+            let dir = 0b0001 << next.0;
+            maze.get_tile_mut(pos).set_connected(dir.into());
+            maze.get_tile_mut(pos).status = ConnectionStatus::Visited;
+            pos = next.1;
+        }
+
+        // carve the final path into the maze
+        pos = anchor;
+        let mut dir = Direction::NoDir as u8;
+        while maze.get_tile(pos).status != ConnectionStatus::InMaze {
+            let temp_dir = maze.get_tile(pos).connections;
+            maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
+            maze.get_tile_mut(pos).connect(opposite(dir).into());
+            dir = temp_dir;
+
+            history.push((pos, dir.into()));
+            pos = pos.travel(dir.into());
+        }
+        maze.get_tile_mut(pos).connect(opposite(dir).into());
     }
 
     (maze, history)
