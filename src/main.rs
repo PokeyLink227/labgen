@@ -34,6 +34,12 @@ struct Args {
 
     #[arg(short = 's', long = "seed")]
     seed: Option<u64>,
+
+    #[arg(long = "passage-width", default_value = "4")]
+    passage_width: u16,
+
+    #[arg(long = "wall-width", default_value = "1")]
+    wall_width: u16,
 }
 
 fn main() {
@@ -48,8 +54,8 @@ fn main() {
 
     now = Instant::now();
     let opts = ImageOptions {
-        passage_width: 3,
-        wall_width: 1,
+        passage_width: args.passage_width,
+        wall_width: args.wall_width,
         color_map: [0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF],
     };
     let ani_opts = AnimationOptions {
