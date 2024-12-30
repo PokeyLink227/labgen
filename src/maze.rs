@@ -1,6 +1,6 @@
 use rand;
-use rand::{thread_rng, Rng};
 use rand::rngs::StdRng;
+use rand::{Rng};
 use std::ops::{Add, AddAssign};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -151,7 +151,12 @@ fn pick_random(points: &[(usize, Point)], rng: &mut StdRng) -> Option<(usize, Po
     }
 }
 
-pub fn generate_maze(width: u16, height: u16, mtype: MazeType, rng: &mut StdRng) -> (Grid, Vec<(Point, Direction)>) {
+pub fn generate_maze(
+    width: u16,
+    height: u16,
+    mtype: MazeType,
+    rng: &mut StdRng,
+) -> (Grid, Vec<(Point, Direction)>) {
     let num_tiles = width * height;
 
     let maze: Grid = Grid {
@@ -190,7 +195,7 @@ fn create_maze_backtrack(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point,
                 })
                 .collect::<Vec<(usize, Point)>>()
                 .as_ref(),
-            rng
+            rng,
         );
 
         match next {
@@ -238,7 +243,7 @@ fn create_maze_prim(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Dire
                 })
                 .collect::<Vec<(usize, Point)>>()
                 .as_ref(),
-            rng
+            rng,
         );
 
         match next {
@@ -267,7 +272,6 @@ fn create_maze_binary(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Di
 
     let num_tiles = maze.width * maze.height;
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(num_tiles as usize);
-    let mut rng = thread_rng();
 
     for y in 0..maze.height as i16 {
         for x in 0..maze.width as i16 {
@@ -303,7 +307,6 @@ fn create_maze_sidewinder(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point
 
     let num_tiles = maze.width * maze.height;
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(num_tiles as usize);
-    let mut rng = thread_rng();
 
     maze.get_tile_mut(Point { x: 0, y: 0 }).connect(East);
     history.push((Point { x: 0, y: 0 }, DirNone));
@@ -361,6 +364,7 @@ fn generate_noise(
     world_height: u16,
     grid_width: u16,
     grid_height: u16,
+    rng: &mut StdRng
 ) -> Vec<f32> {
     // can over-estimate length and be fine
     let cell_width = if world_width % (grid_width - 1) == 0 {
@@ -374,7 +378,6 @@ fn generate_noise(
         world_height / (grid_height - 1) + 1
     };
 
-    let mut rng = thread_rng();
     let mut points: Vec<f32> = vec![0.0f32; (world_width * world_height) as usize];
     let mut grid: Vec<Vector2<f32>> = Vec::with_capacity((grid_width * grid_height) as usize);
 
@@ -521,7 +524,7 @@ fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point, rng: &m
                 })
                 .collect::<Vec<(usize, Point)>>()
                 .as_ref(),
-            rng
+            rng,
         );
 
         match next {
@@ -572,7 +575,7 @@ fn flood_tile_backtrack(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point, rn
                 })
                 .collect::<Vec<(usize, Point)>>()
                 .as_ref(),
-            rng
+            rng,
         );
 
         match next {
@@ -595,7 +598,7 @@ fn flood_tile_backtrack(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point, rn
 }
 
 fn create_maze_noise(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Direction)>) {
-    let noise_map: Vec<u8> = generate_noise(maze.width, maze.height, 7, 7)
+    let noise_map: Vec<u8> = generate_noise(maze.width, maze.height, 7, 7, rng)
         .iter()
         .map(|x| if *x < 0.0 { 0 } else { 1 })
         .collect();

@@ -4,11 +4,8 @@ use crate::{
     },
     maze::{generate_maze, MazeType},
 };
-use rand::{
-    SeedableRng,
-    rngs::StdRng,
-};
 use clap::Parser;
+use rand::{rngs::StdRng, SeedableRng};
 use std::time::Instant;
 
 mod image;
@@ -35,7 +32,7 @@ struct Args {
     #[arg(short = 'u', long = "uncompressed", default_value = "false")]
     uncompressed: bool,
 
-    #[arg(short = 's', long = "seed",)]
+    #[arg(short = 's', long = "seed")]
     seed: Option<u64>,
 }
 
