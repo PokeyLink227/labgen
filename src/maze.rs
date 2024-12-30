@@ -180,7 +180,7 @@ fn create_maze_backtrack(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point,
     let num_tiles = maze.width * maze.height;
 
     let mut stack: Vec<Point> = Vec::new();
-    let mut pos: Point = Point { x: 0, y: 0 };
+    let mut pos: Point = Point::new(rng.gen_range(0..maze.width) as i16, rng.gen_range(0..maze.height) as i16);
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(num_tiles as usize);
 
     maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
@@ -226,7 +226,7 @@ fn create_maze_prim(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Dire
 
     let mut open_tiles: Vec<Point> = Vec::new();
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(num_tiles as usize);
-    let mut pos: Point = Point { x: 0, y: 0 };
+    let mut pos: Point = Point::new(rng.gen_range(0..maze.width) as i16, rng.gen_range(0..maze.height) as i16);
 
     maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
     open_tiles.push(pos);
