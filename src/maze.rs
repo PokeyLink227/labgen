@@ -302,7 +302,7 @@ fn create_maze_binary(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Di
 fn create_maze_sidewinder(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Direction)>) {
     use crate::maze::Direction::*;
 
-    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
+    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len() * 3 / 2);
 
     maze.get_tile_mut(Point { x: 0, y: 0 }).connect(East);
     history.push((Point { x: 0, y: 0 }, NoDir));
