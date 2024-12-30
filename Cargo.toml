@@ -8,5 +8,5 @@ edition = "2021"
 [dependencies]
 png = "0.17.13"
 gif = "0.13.1"
-rand = "0.8.5"
+rand = { version = "0.8.5", features = ["std_rng"] }
 clap = { version = "4.5.23", features = ["derive"] }

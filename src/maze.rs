@@ -1,5 +1,6 @@
 use rand;
 use rand::{thread_rng, Rng};
+use rand::rngs::StdRng;
 use std::ops::{Add, AddAssign};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -142,15 +143,15 @@ fn opposite(src: u8) -> u8 {
     ((src << 2) | (src >> 2)) & 0b1111
 }
 
-fn pick_random(points: &[(usize, Point)]) -> Option<(usize, Point)> {
+fn pick_random(points: &[(usize, Point)], rng: &mut StdRng) -> Option<(usize, Point)> {
     if points.len() > 0 {
-        Some(points[rand::random::<usize>() % points.len()])
+        Some(points[rng.gen_range(0..points.len())])
     } else {
         None
     }
 }
 
-pub fn generate_maze(width: u16, height: u16, mtype: MazeType) -> (Grid, Vec<(Point, Direction)>) {
+pub fn generate_maze(width: u16, height: u16, mtype: MazeType, rng: &mut StdRng) -> (Grid, Vec<(Point, Direction)>) {
     let num_tiles = width * height;
 
     let maze: Grid = Grid {
@@ -160,15 +161,15 @@ pub fn generate_maze(width: u16, height: u16, mtype: MazeType) -> (Grid, Vec<(Po
     };
 
     match mtype {
-        MazeType::Backtrack => create_maze_backtrack(maze),
-        MazeType::Prim => create_maze_prim(maze),
-        MazeType::BinaryTree => create_maze_binary(maze),
-        MazeType::Sidewinder => create_maze_sidewinder(maze),
-        MazeType::Noise => create_maze_noise(maze),
+        MazeType::Backtrack => create_maze_backtrack(maze, rng),
+        MazeType::Prim => create_maze_prim(maze, rng),
+        MazeType::BinaryTree => create_maze_binary(maze, rng),
+        MazeType::Sidewinder => create_maze_sidewinder(maze, rng),
+        MazeType::Noise => create_maze_noise(maze, rng),
     }
 }
 
-fn create_maze_backtrack(mut maze: Grid) -> (Grid, Vec<(Point, Direction)>) {
+fn create_maze_backtrack(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Direction)>) {
     let num_tiles = maze.width * maze.height;
 
     let mut stack: Vec<Point> = Vec::new();
@@ -189,6 +190,7 @@ fn create_maze_backtrack(mut maze: Grid) -> (Grid, Vec<(Point, Direction)>) {
                 })
                 .collect::<Vec<(usize, Point)>>()
                 .as_ref(),
+            rng
         );
 
         match next {
@@ -212,12 +214,11 @@ fn create_maze_backtrack(mut maze: Grid) -> (Grid, Vec<(Point, Direction)>) {
     (maze, history)
 }
 
-fn create_maze_prim(mut maze: Grid) -> (Grid, Vec<(Point, Direction)>) {
+fn create_maze_prim(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Direction)>) {
     let num_tiles = maze.width * maze.height;
 
     let mut open_tiles: Vec<Point> = Vec::new();
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(num_tiles as usize);
-    let mut rng = thread_rng();
     let mut pos: Point = Point { x: 0, y: 0 };
 
     maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
@@ -237,6 +238,7 @@ fn create_maze_prim(mut maze: Grid) -> (Grid, Vec<(Point, Direction)>) {
                 })
                 .collect::<Vec<(usize, Point)>>()
                 .as_ref(),
+            rng
         );
 
         match next {
@@ -260,7 +262,7 @@ fn create_maze_prim(mut maze: Grid) -> (Grid, Vec<(Point, Direction)>) {
     (maze, history)
 }
 
-fn create_maze_binary(mut maze: Grid) -> (Grid, Vec<(Point, Direction)>) {
+fn create_maze_binary(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Direction)>) {
     use crate::maze::Direction::*;
 
     let num_tiles = maze.width * maze.height;
@@ -296,7 +298,7 @@ fn create_maze_binary(mut maze: Grid) -> (Grid, Vec<(Point, Direction)>) {
     (maze, history)
 }
 
-fn create_maze_sidewinder(mut maze: Grid) -> (Grid, Vec<(Point, Direction)>) {
+fn create_maze_sidewinder(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Direction)>) {
     use crate::maze::Direction::*;
 
     let num_tiles = maze.width * maze.height;
@@ -487,7 +489,7 @@ fn generate_noise(
     points
 }
 
-fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point) {
+fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point, rng: &mut StdRng) {
     if pos.x >= maze.width as i16 || pos.y >= maze.height as i16 {
         return;
     }
@@ -501,7 +503,6 @@ fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point) {
     }
 
     let mut open_tiles: Vec<Point> = Vec::new();
-    let mut rng = thread_rng();
 
     open_tiles.push(pos);
     maze.tiles[(pos.x + pos.y * maze.width as i16) as usize].status = ConnectionStatus::InMaze;
@@ -520,6 +521,7 @@ fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point) {
                 })
                 .collect::<Vec<(usize, Point)>>()
                 .as_ref(),
+            rng
         );
 
         match next {
@@ -540,7 +542,7 @@ fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point) {
     }
 }
 
-fn flood_tile_backtrack(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point) {
+fn flood_tile_backtrack(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point, rng: &mut StdRng) {
     if pos.x >= maze.width as i16 || pos.y >= maze.height as i16 {
         return;
     }
@@ -570,6 +572,7 @@ fn flood_tile_backtrack(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point) {
                 })
                 .collect::<Vec<(usize, Point)>>()
                 .as_ref(),
+            rng
         );
 
         match next {
@@ -591,7 +594,7 @@ fn flood_tile_backtrack(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point) {
     }
 }
 
-fn create_maze_noise(mut maze: Grid) -> (Grid, Vec<(Point, Direction)>) {
+fn create_maze_noise(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Direction)>) {
     let noise_map: Vec<u8> = generate_noise(maze.width, maze.height, 7, 7)
         .iter()
         .map(|x| if *x < 0.0 { 0 } else { 1 })
@@ -599,8 +602,8 @@ fn create_maze_noise(mut maze: Grid) -> (Grid, Vec<(Point, Direction)>) {
 
     for y in 0..maze.height as i16 {
         for x in 0..maze.width as i16 {
-            flood_tile_prim(&mut maze, &noise_map, Point { x, y });
-            flood_tile_backtrack(&mut maze, &noise_map, Point { x, y });
+            flood_tile_prim(&mut maze, &noise_map, Point { x, y }, rng);
+            flood_tile_backtrack(&mut maze, &noise_map, Point { x, y }, rng);
         }
     }
 

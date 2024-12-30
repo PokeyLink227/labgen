@@ -4,6 +4,10 @@ use crate::{
     },
     maze::{generate_maze, MazeType},
 };
+use rand::{
+    SeedableRng,
+    rngs::StdRng,
+};
 use clap::Parser;
 use std::time::Instant;
 
@@ -30,13 +34,20 @@ struct Args {
 
     #[arg(short = 'u', long = "uncompressed", default_value = "false")]
     uncompressed: bool,
+
+    #[arg(short = 's', long = "seed",)]
+    seed: Option<u64>,
 }
 
 fn main() {
     let args = Args::parse();
 
+    let seed: u64 = args.seed.unwrap_or(rand::random::<u64>());
+    let mut rng: StdRng = StdRng::seed_from_u64(seed);
+    println!("seed: {}", seed);
+
     let mut now = Instant::now();
-    let (nodes, hist) = generate_maze(args.width, args.height, args.method);
+    let (nodes, hist) = generate_maze(args.width, args.height, args.method, &mut rng);
     let maze_time = now.elapsed();
 
     now = Instant::now();
