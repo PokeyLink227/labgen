@@ -215,29 +215,17 @@ pub fn generate_png(maze: &Grid, opts: &ImageOptions) {
         maze.height * cell_width + opts.wall_width,
     );
 
-    let color_map = &[
-        ColorRGB {
-            red: 0,
-            green: 0,
-            blue: 0,
-        },
-        ColorRGB {
-            red: 255,
-            green: 255,
-            blue: 255,
-        },
-    ];
-
     let path = Path::new(r"./image.png");
     let file = File::create(path).unwrap();
     let ref mut writer = BufWriter::new(file);
 
     let mut encoder = png::Encoder::new(writer, width as u32, height as u32);
-    encoder.set_color(png::ColorType::Rgb);
+    encoder.set_color(png::ColorType::Indexed);
+    encoder.set_palette(&opts.color_map);
 
     let mut writer = encoder.write_header().unwrap();
 
-    let mut pixels: Vec<ColorRGB> = vec![color_map[0]; width as usize * height as usize];
+    let mut pixels: Vec<u8> = vec![0; width as usize * height as usize];
 
     for py in 0..maze.height {
         for px in 0..maze.width {
@@ -252,30 +240,25 @@ pub fn generate_png(maze: &Grid, opts: &ImageOptions) {
 
             for y in 0..opts.passage_width {
                 for x in 0..opts.passage_width {
-                    pixels[(x + left) as usize + ((y + top) as usize * width as usize)] =
-                        color_map[1];
+                    pixels[(x + left) as usize + ((y + top) as usize * width as usize)] = 1;
                 }
             }
             if connections & Direction::East as u8 != 0 {
                 for y in 0..opts.passage_width {
                     for x in opts.passage_width..cell_width {
-                        pixels[(x + left) as usize + ((y + top) as usize * width as usize)] =
-                            color_map[1];
+                        pixels[(x + left) as usize + ((y + top) as usize * width as usize)] = 1;
                     }
                 }
             }
             if connections & Direction::South as u8 != 0 {
                 for y in opts.passage_width..cell_width {
                     for x in 0..opts.passage_width {
-                        pixels[(x + left) as usize + ((y + top) as usize * width as usize)] =
-                            color_map[1];
+                        pixels[(x + left) as usize + ((y + top) as usize * width as usize)] = 1;
                     }
                 }
             }
         }
     }
 
-    writer
-        .write_image_data(&ColorRGB::as_bytes(&pixels))
-        .unwrap();
+    writer.write_image_data(&pixels).unwrap();
 }
