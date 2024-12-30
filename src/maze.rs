@@ -77,7 +77,7 @@ pub enum MazeType {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Direction {
-    DirNone = 0b0000,
+    NoDir = 0b0000,
     North = 0b0001,
     East = 0b0010,
     South = 0b0100,
@@ -91,7 +91,7 @@ impl From<u8> for Direction {
             0b0010 => Direction::East,
             0b0100 => Direction::South,
             0b1000 => Direction::West,
-            _ => Direction::DirNone,
+            _ => Direction::NoDir,
         }
     }
 }
@@ -185,7 +185,7 @@ fn create_maze_backtrack(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point,
 
     maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
     stack.push(pos);
-    history.push((pos, Direction::DirNone.into()));
+    history.push((pos, Direction::NoDir.into()));
 
     while !stack.is_empty() {
         let next = pick_random(
@@ -230,7 +230,7 @@ fn create_maze_prim(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Dire
 
     maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
     open_tiles.push(pos);
-    history.push((pos, Direction::DirNone.into()));
+    history.push((pos, Direction::NoDir.into()));
 
     while !open_tiles.is_empty() {
         let current_tile_index: usize = rng.gen_range(0..open_tiles.len());
@@ -296,7 +296,7 @@ fn create_maze_binary(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Di
                 history.push((Point::new(x, y), North));
                 maze.get_tile_mut(Point::new(x, y - 1)).connect(South);
             } else {
-                history.push((Point::new(x, y), DirNone));
+                history.push((Point::new(x, y), NoDir));
             }
 
             maze.get_tile_mut(Point::new(x, y)).status = ConnectionStatus::InMaze;
@@ -313,7 +313,7 @@ fn create_maze_sidewinder(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(num_tiles as usize);
 
     maze.get_tile_mut(Point { x: 0, y: 0 }).connect(East);
-    history.push((Point { x: 0, y: 0 }, DirNone));
+    history.push((Point { x: 0, y: 0 }, NoDir));
 
     for x in 1..(maze.width - 1) as i16 {
         maze.get_tile_mut(Point { x: x, y: 0 }).connections |= East as u8 | West as u8;
@@ -372,7 +372,7 @@ fn create_maze_growingtree(mut maze: Grid, rng: &mut StdRng, bias: GrowingTreeBi
 
     let pos = Point::new(rng.gen_range(0..maze.width) as i16, rng.gen_range(0..maze.height) as i16);
     maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
-    history.push((pos, Direction::DirNone));
+    history.push((pos, Direction::NoDir));
     open.push(pos);
 
     while !open.is_empty() {
