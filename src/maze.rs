@@ -1,6 +1,6 @@
 use rand;
 use rand::rngs::StdRng;
-use rand::{Rng};
+use rand::Rng;
 use std::ops::{Add, AddAssign};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -176,7 +176,10 @@ pub fn generate_maze(
 
 fn create_maze_backtrack(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Direction)>) {
     let mut stack: Vec<Point> = Vec::new();
-    let mut pos: Point = Point::new(rng.gen_range(0..maze.width) as i16, rng.gen_range(0..maze.height) as i16);
+    let mut pos: Point = Point::new(
+        rng.gen_range(0..maze.width) as i16,
+        rng.gen_range(0..maze.height) as i16,
+    );
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
 
     maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
@@ -220,7 +223,10 @@ fn create_maze_backtrack(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point,
 fn create_maze_prim(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Direction)>) {
     let mut open_tiles: Vec<Point> = Vec::new();
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
-    let mut pos: Point = Point::new(rng.gen_range(0..maze.width) as i16, rng.gen_range(0..maze.height) as i16);
+    let mut pos: Point = Point::new(
+        rng.gen_range(0..maze.width) as i16,
+        rng.gen_range(0..maze.height) as i16,
+    );
 
     maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
     open_tiles.push(pos);
@@ -357,25 +363,35 @@ impl Default for GrowingTreeBias {
     }
 }
 
-fn create_maze_growingtree(mut maze: Grid, rng: &mut StdRng, bias: GrowingTreeBias) -> (Grid, Vec<(Point, Direction)>) {
+fn create_maze_growingtree(
+    mut maze: Grid,
+    rng: &mut StdRng,
+    bias: GrowingTreeBias,
+) -> (Grid, Vec<(Point, Direction)>) {
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
     let mut open: Vec<Point> = Vec::new();
 
-    let pos = Point::new(rng.gen_range(0..maze.width) as i16, rng.gen_range(0..maze.height) as i16);
+    let pos = Point::new(
+        rng.gen_range(0..maze.width) as i16,
+        rng.gen_range(0..maze.height) as i16,
+    );
     maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
     history.push((pos, Direction::NoDir));
     open.push(pos);
 
     while !open.is_empty() {
         let selected_index = match bias {
-            GrowingTreeBias::Oldest => 0, // lowest river factor
+            GrowingTreeBias::Oldest => 0,              // lowest river factor
             GrowingTreeBias::Newest => open.len() - 1, // backtrack
             GrowingTreeBias::Random => rng.gen_range(0..open.len()), // similar to prim
-            GrowingTreeBias::Percent(p) => rng.gen_range((open.len() / 100 * (100 - p as usize))..open.len()),
+            GrowingTreeBias::Percent(p) => {
+                rng.gen_range((open.len() / 100 * (100 - p as usize))..open.len())
+            }
         };
         let selected = open[selected_index];
         let next = pick_random(
-            selected.adjacent()
+            selected
+                .adjacent()
                 .into_iter()
                 .enumerate()
                 .filter(|(_, x)| {
@@ -402,7 +418,6 @@ fn create_maze_growingtree(mut maze: Grid, rng: &mut StdRng, bias: GrowingTreeBi
                 history.push((selected, opposite(dir).into()));
             }
         }
-
     }
 
     (maze, history)
@@ -427,7 +442,7 @@ fn generate_noise(
     world_height: u16,
     grid_width: u16,
     grid_height: u16,
-    rng: &mut StdRng
+    rng: &mut StdRng,
 ) -> Vec<f32> {
     // can over-estimate length and be fine
     let cell_width = if world_width % (grid_width - 1) == 0 {
