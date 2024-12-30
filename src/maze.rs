@@ -298,6 +298,8 @@ fn create_maze_binary(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Di
             } else {
                 history.push((Point::new(x, y), DirNone));
             }
+
+            maze.get_tile_mut(Point::new(x, y)).status = ConnectionStatus::InMaze;
         }
     }
 
@@ -328,9 +330,11 @@ fn create_maze_sidewinder(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point
             if rng.gen::<bool>() && (x as u16) < maze.width - 1 {
                 maze.get_tile_mut(Point::new(x, y)).connect(East);
                 maze.get_tile_mut(Point::new(x + 1, y)).connect(West);
+                maze.get_tile_mut(Point::new(x, y)).status = ConnectionStatus::InMaze;
                 history.push((Point::new(x, y), East));
             } else {
                 if maze.get_tile(Point::new(x, y)).connected(West) {
+                    maze.get_tile_mut(Point::new(x, y)).status = ConnectionStatus::InMaze;
                     history.push((Point::new(x, y), West));
                 }
 
