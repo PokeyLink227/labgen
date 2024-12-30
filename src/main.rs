@@ -23,7 +23,7 @@ struct Args {
     #[arg()]
     height: u16,
 
-    #[arg(short = 'm', long = "method", default_value = "0")]
+    #[arg(short = 'm', long = "method", default_value = "backtrack")]
     method: MazeType,
 
     #[arg(short = 'o', long = "out", value_name = "output file", id = "out")]
@@ -44,7 +44,6 @@ fn main() {
 
     let seed: u64 = args.seed.unwrap_or(rand::random::<u64>());
     let mut rng: StdRng = StdRng::seed_from_u64(seed);
-    println!("seed: {}", seed);
 
     let mut now = Instant::now();
     let (nodes, hist) = generate_maze(args.width, args.height, args.method, &mut rng);
@@ -72,6 +71,7 @@ fn main() {
     }
     let image_time = now.elapsed();
 
+    println!("seed: {}", seed);
     println!(
         "Elapsed time: maze {}.{:09.9}s, gif {}.{:09.9}s",
         maze_time.as_secs(),
