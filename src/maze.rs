@@ -158,10 +158,8 @@ pub fn generate_maze(
     mtype: MazeType,
     rng: &mut StdRng,
 ) -> (Grid, Vec<(Point, Direction)>) {
-    let num_tiles = width * height;
-
     let maze: Grid = Grid {
-        tiles: vec![Tile::default(); num_tiles as usize],
+        tiles: vec![Tile::default(); width as usize * height as usize],
         width: width,
         height: height,
     };
@@ -177,11 +175,9 @@ pub fn generate_maze(
 }
 
 fn create_maze_backtrack(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Direction)>) {
-    let num_tiles = maze.width * maze.height;
-
     let mut stack: Vec<Point> = Vec::new();
     let mut pos: Point = Point::new(rng.gen_range(0..maze.width) as i16, rng.gen_range(0..maze.height) as i16);
-    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(num_tiles as usize);
+    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
 
     maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
     stack.push(pos);
@@ -222,10 +218,8 @@ fn create_maze_backtrack(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point,
 }
 
 fn create_maze_prim(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Direction)>) {
-    let num_tiles = maze.width * maze.height;
-
     let mut open_tiles: Vec<Point> = Vec::new();
-    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(num_tiles as usize);
+    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
     let mut pos: Point = Point::new(rng.gen_range(0..maze.width) as i16, rng.gen_range(0..maze.height) as i16);
 
     maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
@@ -272,8 +266,7 @@ fn create_maze_prim(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Dire
 fn create_maze_binary(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Direction)>) {
     use crate::maze::Direction::*;
 
-    let num_tiles = maze.width * maze.height;
-    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(num_tiles as usize);
+    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
 
     for y in 0..maze.height as i16 {
         for x in 0..maze.width as i16 {
@@ -309,8 +302,7 @@ fn create_maze_binary(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Di
 fn create_maze_sidewinder(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Direction)>) {
     use crate::maze::Direction::*;
 
-    let num_tiles = maze.width * maze.height;
-    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(num_tiles as usize);
+    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
 
     maze.get_tile_mut(Point { x: 0, y: 0 }).connect(East);
     history.push((Point { x: 0, y: 0 }, NoDir));
@@ -366,8 +358,7 @@ impl Default for GrowingTreeBias {
 }
 
 fn create_maze_growingtree(mut maze: Grid, rng: &mut StdRng, bias: GrowingTreeBias) -> (Grid, Vec<(Point, Direction)>) {
-    let num_tiles = maze.width * maze.height;
-    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(num_tiles as usize);
+    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
     let mut open: Vec<Point> = Vec::new();
 
     let pos = Point::new(rng.gen_range(0..maze.width) as i16, rng.gen_range(0..maze.height) as i16);
