@@ -69,6 +69,7 @@ fn main() {
     let image_time = now.elapsed();
 
     println!("seed: {}", seed);
+    //println!("dbg: {:?}", nodes.tiles);
     println!(
         "Elapsed time: maze {}.{:09.9}s, gif {}.{:09.9}s",
         maze_time.as_secs(),

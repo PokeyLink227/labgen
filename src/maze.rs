@@ -71,6 +71,7 @@ pub enum MazeType {
     BinaryTree,
     Sidewinder,
     Noise,
+    GrowingTree,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -171,6 +172,7 @@ pub fn generate_maze(
         MazeType::BinaryTree => create_maze_binary(maze, rng),
         MazeType::Sidewinder => create_maze_sidewinder(maze, rng),
         MazeType::Noise => create_maze_noise(maze, rng),
+        MazeType::GrowingTree => create_maze_growingtree(maze, rng, GrowingTreeBias::Percent(10)),
     }
 }
 
@@ -340,6 +342,72 @@ fn create_maze_sidewinder(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point
                 range_start = x + 1;
             }
         }
+    }
+
+    (maze, history)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GrowingTreeBias {
+    Oldest,
+    Newest,
+    Random,
+    Percent(u8),
+}
+
+impl Default for GrowingTreeBias {
+    fn default() -> Self {
+        GrowingTreeBias::Percent(10)
+    }
+}
+
+fn create_maze_growingtree(mut maze: Grid, rng: &mut StdRng, bias: GrowingTreeBias) -> (Grid, Vec<(Point, Direction)>) {
+    let num_tiles = maze.width * maze.height;
+    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(num_tiles as usize);
+    let mut open: Vec<Point> = Vec::new();
+
+    let pos = Point::new(rng.gen_range(0..maze.width) as i16, rng.gen_range(0..maze.height) as i16);
+    maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
+    history.push((pos, Direction::DirNone));
+    open.push(pos);
+
+    while !open.is_empty() {
+        let selected_index = match bias {
+            GrowingTreeBias::Oldest => 0, // lowest river factor
+            GrowingTreeBias::Newest => open.len() - 1, // backtrack
+            GrowingTreeBias::Random => rng.gen_range(0..open.len()), // similar to prim
+            GrowingTreeBias::Percent(p) => rng.gen_range((open.len() / 100 * (100 - p as usize))..open.len()),
+        };
+        let selected = open[selected_index];
+        let next = pick_random(
+            selected.adjacent()
+                .into_iter()
+                .enumerate()
+                .filter(|(_, x)| {
+                    maze.contains(*x) && maze.get_tile(*x).status == ConnectionStatus::UnVisited
+                })
+                .collect::<Vec<(usize, Point)>>()
+                .as_ref(),
+            rng,
+        );
+
+        match next {
+            None => {
+                open.remove(selected_index);
+            }
+            Some(next) => {
+                let dir = 0b0001 << next.0;
+                maze.get_tile_mut(selected).connect(dir.into());
+
+                let selected = next.1;
+                maze.get_tile_mut(selected).connect(opposite(dir).into());
+                maze.get_tile_mut(selected).status = ConnectionStatus::InMaze;
+
+                open.push(selected);
+                history.push((selected, opposite(dir).into()));
+            }
+        }
+
     }
 
     (maze, history)
