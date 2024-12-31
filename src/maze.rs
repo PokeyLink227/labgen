@@ -83,6 +83,7 @@ pub enum MazeType {
     Noise,
     GrowingTree,
     Wilson,
+    Kruskal,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -103,6 +104,18 @@ impl From<u8> for Direction {
             0b0100 => Direction::South,
             0b1000 => Direction::West,
             _ => Direction::NoDir,
+        }
+    }
+}
+
+impl Direction {
+    pub fn opposite(self) -> Self {
+        match self {
+            Direction::North => Direction::South,
+            Direction::East => Direction::West,
+            Direction::South => Direction::North,
+            Direction::West => Direction::East,
+            Direction::NoDir => Direction::NoDir,
         }
     }
 }
@@ -135,6 +148,10 @@ pub struct Grid {
 }
 
 impl Grid {
+    pub fn get_index(&self, pos: Point) -> usize {
+        pos.x as usize + pos.y as usize * self.width as usize
+    }
+
     pub fn contains(&self, pt: Point) -> bool {
         pt.x >= 0 && (pt.x as u16) < self.width && pt.y >= 0 && (pt.y as u16) < self.height
     }
@@ -187,6 +204,7 @@ pub fn generate_maze(
         MazeType::Noise => create_maze_noise(maze, rng),
         MazeType::GrowingTree => create_maze_growingtree(maze, rng, GrowingTreeBias::Percent(10)),
         MazeType::Wilson => create_maze_wilson(maze, rng),
+        MazeType::Kruskal => create_maze_kruskal(maze, rng),
     }
 }
 
@@ -504,6 +522,56 @@ fn create_maze_wilson(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Di
             pos = pos.travel(dir.into());
         }
         maze.get_tile_mut(pos).connect(opposite(dir).into());
+    }
+
+    (maze, history)
+}
+
+fn create_maze_kruskal(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Direction)>) {
+    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
+    let mut edges: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len() * 2);
+    let mut region_map: Vec<u32> = (0..maze.tiles.len() as u32).collect();
+
+    // generate edges
+    for y in 0..maze.height as i16 {
+        for x in 0..maze.width as i16 {
+            if x > 0 {edges.push((Point::new(x, y), Direction::West));}
+            if y > 0 {edges.push((Point::new(x, y), Direction::North));}
+        }
+    }
+    // shuffle edges
+    for i in 0..edges.len() {
+        let index = rng.gen_range(i..edges.len());
+        let temp = edges[i];
+        edges[i] = edges[index];
+        edges[index] = temp;
+    }
+
+    // generate maze
+    for edge in edges {
+        // if edge connects 2 different regions
+        if region_map[maze.get_index(edge.0)] != region_map[maze.get_index(edge.0.travel(edge.1))] {
+            if maze.get_tile(edge.0).status != ConnectionStatus::InMaze {
+                maze.get_tile_mut(edge.0).status = ConnectionStatus::InMaze;
+            }
+            history.push(edge);
+            maze.get_tile_mut(edge.0).connect(edge.1);
+
+            if maze.get_tile(edge.0.travel(edge.1)).status != ConnectionStatus::InMaze {
+                maze.get_tile_mut(edge.0.travel(edge.1)).status = ConnectionStatus::InMaze;
+                history.push((edge.0.travel(edge.1), Direction::NoDir));
+            }
+            maze.get_tile_mut(edge.0.travel(edge.1)).connect(edge.1.opposite());
+
+            // update region map
+            let old: u32 = region_map[maze.get_index(edge.0.travel(edge.1))];
+            let new: u32 = region_map[maze.get_index(edge.0)];
+            for i in 0..region_map.len() {
+                if region_map[i] == old {
+                    region_map[i] = new;
+                }
+            }
+        }
     }
 
     (maze, history)
