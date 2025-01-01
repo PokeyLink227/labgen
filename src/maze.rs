@@ -460,7 +460,6 @@ fn create_maze_growingtree(
 fn create_maze_wilson(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Direction)>) {
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
     let mut reservoir: Vec<Point> = Vec::with_capacity(maze.tiles.len());
-    let mut cells_added = 0;
 
     // generate reservoir
     for y in 0..maze.height as i16 {
@@ -536,8 +535,12 @@ fn create_maze_kruskal(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, D
     // generate edges
     for y in 0..maze.height as i16 {
         for x in 0..maze.width as i16 {
-            if x > 0 {edges.push((Point::new(x, y), Direction::West));}
-            if y > 0 {edges.push((Point::new(x, y), Direction::North));}
+            if x > 0 {
+                edges.push((Point::new(x, y), Direction::West));
+            }
+            if y > 0 {
+                edges.push((Point::new(x, y), Direction::North));
+            }
         }
     }
     // shuffle edges
@@ -551,7 +554,11 @@ fn create_maze_kruskal(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, D
     // generate maze
     for edge in edges {
         // if edge connects 2 different regions
-        if merge_sets(&mut region_map, maze.get_index(edge.0), maze.get_index(edge.0.travel(edge.1))) {
+        if merge_sets(
+            &mut region_map,
+            maze.get_index(edge.0),
+            maze.get_index(edge.0.travel(edge.1)),
+        ) {
             if maze.get_tile(edge.0).status != ConnectionStatus::InMaze {
                 maze.get_tile_mut(edge.0).status = ConnectionStatus::InMaze;
             }
@@ -562,7 +569,8 @@ fn create_maze_kruskal(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, D
                 maze.get_tile_mut(edge.0.travel(edge.1)).status = ConnectionStatus::InMaze;
                 history.push((edge.0.travel(edge.1), Direction::NoDir));
             }
-            maze.get_tile_mut(edge.0.travel(edge.1)).connect(edge.1.opposite());
+            maze.get_tile_mut(edge.0.travel(edge.1))
+                .connect(edge.1.opposite());
         }
     }
 
@@ -570,7 +578,7 @@ fn create_maze_kruskal(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, D
 }
 
 // 10x faster than normal lookup
-fn set_lookup_flatten(region_map: &mut [u32], mut node: usize) -> u32 {
+fn set_lookup_flatten(region_map: &mut [u32], node: usize) -> u32 {
     let mut node = node as u32;
     let mut root = node;
     // find root of set (normal lookup)

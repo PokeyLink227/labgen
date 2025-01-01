@@ -2,37 +2,6 @@ use crate::maze::{ConnectionStatus, Direction, Grid, Point};
 use gif::{DisposalMethod, Encoder, Frame, Repeat};
 use std::{borrow::Cow, fs::File, io::BufWriter, path::Path};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-struct ColorRGB {
-    red: u8,
-    green: u8,
-    blue: u8,
-}
-
-impl ColorRGB {
-    fn as_bytes(color_array: &[ColorRGB]) -> Vec<u8> {
-        let mut byte_array: Vec<u8> = vec![0; color_array.len() * 3];
-
-        let mut pos = 0;
-        for pixel in color_array {
-            byte_array[pos + 0] = pixel.red;
-            byte_array[pos + 1] = pixel.green;
-            byte_array[pos + 2] = pixel.blue;
-            pos += 3;
-        }
-
-        return byte_array;
-    }
-}
-
-fn get_color(val: f32) -> ColorRGB {
-    ColorRGB {
-        red: ((255 as f32) * (val + 1.0) / 2.0) as u8,
-        green: ((255 as f32) * (val + 1.0) / 2.0) as u8,
-        blue: ((255 as f32) * (val + 1.0) / 2.0) as u8,
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct ImageOptions {
     pub file_path: String,
@@ -61,7 +30,8 @@ pub fn generate_gif_uncompressed(
     );
 
     let mut state: Vec<u8> = vec![0; width as usize * height as usize];
-    let mut image = BufWriter::new(File::create(format!("{}.gif", &opts.file_path).as_str()).unwrap());
+    let mut image =
+        BufWriter::new(File::create(format!("{}.gif", &opts.file_path).as_str()).unwrap());
     let mut encoder = Encoder::new(&mut image, width, height, &opts.color_map).unwrap();
     encoder.set_repeat(Repeat::Infinite).unwrap();
 
@@ -144,7 +114,8 @@ pub fn generate_gif(
     let empty_maze: Vec<u8> = vec![0; width as usize * height as usize];
     let connected_cell: Vec<u8> = vec![1; (cell_width * cell_width) as usize];
 
-    let mut image = BufWriter::new(File::create(format!("{}.gif", &opts.file_path).as_str()).unwrap());
+    let mut image =
+        BufWriter::new(File::create(format!("{}.gif", &opts.file_path).as_str()).unwrap());
     let mut encoder = Encoder::new(&mut image, width, height, &opts.color_map).unwrap();
     encoder.set_repeat(Repeat::Infinite).unwrap();
 

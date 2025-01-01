@@ -23,7 +23,13 @@ struct Args {
     #[arg(short = 'm', long = "method", default_value = "backtrack")]
     method: MazeType,
 
-    #[arg(short = 'o', long = "out", value_name = "output name", id = "out", default_value = "./out")]
+    #[arg(
+        short = 'o',
+        long = "out",
+        value_name = "output name",
+        id = "out",
+        default_value = "./out"
+    )]
     file_path: String,
 
     #[arg(short = 'a', long = "animate")]
