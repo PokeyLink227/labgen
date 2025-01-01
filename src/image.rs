@@ -33,8 +33,9 @@ fn get_color(val: f32) -> ColorRGB {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ImageOptions {
+    pub file_path: String,
     pub passage_width: u16,
     pub wall_width: u16,
     pub color_map: [u8; 6],
@@ -60,7 +61,7 @@ pub fn generate_gif_uncompressed(
     );
 
     let mut state: Vec<u8> = vec![0; width as usize * height as usize];
-    let mut image = BufWriter::new(File::create("./animation.gif").unwrap());
+    let mut image = BufWriter::new(File::create(format!("{}.gif", &opts.file_path).as_str()).unwrap());
     let mut encoder = Encoder::new(&mut image, width, height, &opts.color_map).unwrap();
     encoder.set_repeat(Repeat::Infinite).unwrap();
 
@@ -143,7 +144,7 @@ pub fn generate_gif(
     let empty_maze: Vec<u8> = vec![0; width as usize * height as usize];
     let connected_cell: Vec<u8> = vec![1; (cell_width * cell_width) as usize];
 
-    let mut image = BufWriter::new(File::create("./animation.gif").unwrap());
+    let mut image = BufWriter::new(File::create(format!("{}.gif", &opts.file_path).as_str()).unwrap());
     let mut encoder = Encoder::new(&mut image, width, height, &opts.color_map).unwrap();
     encoder.set_repeat(Repeat::Infinite).unwrap();
 
@@ -215,8 +216,7 @@ pub fn generate_png(maze: &Grid, opts: &ImageOptions) {
         maze.height * cell_width + opts.wall_width,
     );
 
-    let path = Path::new(r"./image.png");
-    let file = File::create(path).unwrap();
+    let file = File::create(format!("{}.png", &opts.file_path).as_str()).unwrap();
     let ref mut writer = BufWriter::new(file);
 
     let mut encoder = png::Encoder::new(writer, width as u32, height as u32);

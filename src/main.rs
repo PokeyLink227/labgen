@@ -23,8 +23,8 @@ struct Args {
     #[arg(short = 'm', long = "method", default_value = "backtrack")]
     method: MazeType,
 
-    #[arg(short = 'o', long = "out", value_name = "output file", id = "out")]
-    destination_file: Option<String>,
+    #[arg(short = 'o', long = "out", value_name = "output name", id = "out", default_value = "./out")]
+    file_path: String,
 
     #[arg(short = 'a', long = "animate")]
     animate: bool,
@@ -35,11 +35,17 @@ struct Args {
     #[arg(short = 's', long = "seed")]
     seed: Option<u64>,
 
-    #[arg(long = "passage-width", default_value = "4")]
+    #[arg(long = "passagewidth", default_value = "4")]
     passage_width: u16,
 
-    #[arg(long = "wall-width", default_value = "1")]
+    #[arg(long = "wallwidth", default_value = "1")]
     wall_width: u16,
+
+    #[arg(short = 'f', long = "frametime", default_value = "2")]
+    frame_time: u16,
+
+    #[arg(short = 'p', long = "pausetime", default_value = "100")]
+    pause_time: u16,
 }
 
 fn main() {
@@ -54,13 +60,14 @@ fn main() {
 
     now = Instant::now();
     let opts = ImageOptions {
+        file_path: args.file_path,
         passage_width: args.passage_width,
         wall_width: args.wall_width,
         color_map: [0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF],
     };
     let ani_opts = AnimationOptions {
-        frame_time: 2,
-        pause_time: 100,
+        frame_time: args.frame_time,
+        pause_time: args.pause_time,
     };
 
     if args.animate {
