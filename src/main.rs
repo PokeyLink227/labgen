@@ -14,42 +14,56 @@ mod maze;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    #[arg()]
+    /// width of the maze in cells
+    #[arg(value_name = "width")]
     width: u16,
 
-    #[arg()]
+    /// height of the maze in cells
+    #[arg(value_name = "height")]
     height: u16,
 
+    /// generation method used for the maze
     #[arg(short = 'm', long = "method", default_value = "backtrack")]
     method: MazeType,
 
+    /// file to save image to
     #[arg(
         short = 'o',
         long = "out",
-        value_name = "output name",
-        id = "out",
-        default_value = "./out"
+        value_name = "file",
+        default_value = "./maze"
     )]
     file_path: String,
 
+    /// generate an animation rather than an image
     #[arg(short = 'a', long = "animate")]
     animate: bool,
 
-    #[arg(short = 'u', long = "uncompressed", default_value = "false")]
-    uncompressed: bool,
+    /// try to compress generated gif
+    #[arg(short = 'c', long = "compress", default_value = "false")]
+    compress: bool,
 
+    /// number of new cells to draw per frame of animation
+    #[arg(short = 'b', long = "batch", value_name = "batch size", default_value = "1")]
+    batch_size: u16,
+
+    /// rng seed
     #[arg(short = 's', long = "seed")]
     seed: Option<u64>,
 
+    /// pixel dimension of passages
     #[arg(long = "passagewidth", default_value = "4")]
     passage_width: u16,
 
+    /// pixel dimension of walls
     #[arg(long = "wallwidth", default_value = "1")]
     wall_width: u16,
 
+    /// length of time between frames (units of 10ms)
     #[arg(short = 'f', long = "frametime", default_value = "2")]
     frame_time: u16,
 
+    /// length of time for final frame (units of 10ms)
     #[arg(short = 'p', long = "pausetime", default_value = "100")]
     pause_time: u16,
 }
@@ -77,10 +91,10 @@ fn main() {
     };
 
     if args.animate {
-        if args.uncompressed {
-            generate_gif_uncompressed(&nodes, &hist, &opts, &ani_opts);
-        } else {
+        if args.compress {
             generate_gif(&nodes, &hist, &opts, &ani_opts);
+        } else {
+            generate_gif_uncompressed(&nodes, &hist, &opts, &ani_opts);
         }
     } else {
         generate_png(&nodes, &opts);
