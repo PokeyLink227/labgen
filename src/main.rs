@@ -88,6 +88,7 @@ fn main() {
     let ani_opts = AnimationOptions {
         frame_time: args.frame_time,
         pause_time: args.pause_time,
+        batch_size: args.batch_size,
     };
 
     if args.animate {

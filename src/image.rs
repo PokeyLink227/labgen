@@ -14,6 +14,7 @@ pub struct ImageOptions {
 pub struct AnimationOptions {
     pub frame_time: u16,
     pub pause_time: u16,
+    pub batch_size: u16,
 }
 
 pub fn generate_gif_uncompressed(
@@ -35,11 +36,14 @@ pub fn generate_gif_uncompressed(
     let mut encoder = Encoder::new(&mut image, width, height, &opts.color_map).unwrap();
     encoder.set_repeat(Repeat::Infinite).unwrap();
 
+    let mut frame_num = 0;
     for (pt, dir) in history {
         let area_top: u16;
         let area_left: u16;
         let area_width: u16;
         let area_height: u16;
+
+        frame_num += 1;
 
         match dir {
             Direction::NoDir => {
@@ -81,12 +85,14 @@ pub fn generate_gif_uncompressed(
         }
 
         // generate and save frame
-        let mut frame = Frame::default();
-        frame.width = width;
-        frame.height = height;
-        frame.delay = ani_opts.frame_time;
-        frame.buffer = Cow::Borrowed(&state);
-        encoder.write_frame(&frame).unwrap();
+        if frame_num % ani_opts.batch_size == 0 {
+            let mut frame = Frame::default();
+            frame.width = width;
+            frame.height = height;
+            frame.delay = ani_opts.frame_time;
+            frame.buffer = Cow::Borrowed(&state);
+            encoder.write_frame(&frame).unwrap();
+        }
     }
 
     // final frame with a higher delay
@@ -128,6 +134,7 @@ pub fn generate_gif(
     encoder.write_frame(&frame).unwrap();
 
     for (pt, dir) in history {
+
         let mut frame = Frame::default();
         frame.delay = ani_opts.frame_time;
 
