@@ -134,7 +134,6 @@ pub fn generate_gif(
     encoder.write_frame(&frame).unwrap();
 
     for (pt, dir) in history {
-
         let mut frame = Frame::default();
         frame.delay = ani_opts.frame_time;
 

@@ -44,7 +44,12 @@ struct Args {
     compress: bool,
 
     /// number of new cells to draw per frame of animation
-    #[arg(short = 'b', long = "batch", value_name = "batch size", default_value = "1")]
+    #[arg(
+        short = 'b',
+        long = "batch",
+        value_name = "batch size",
+        default_value = "1"
+    )]
     batch_size: u16,
 
     /// rng seed
