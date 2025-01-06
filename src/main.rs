@@ -71,6 +71,10 @@ struct Args {
     /// length of time for final frame (units of 10ms)
     #[arg(short = 'p', long = "pausetime", default_value = "100")]
     pause_time: u16,
+
+    /// directional wrapping across buondries
+    #[arg(short = 'w', long = "wrap")]
+    wrap: Option<MazeWrap>,
 }
 
 fn main() {
@@ -80,13 +84,7 @@ fn main() {
     let mut rng: StdRng = StdRng::seed_from_u64(seed);
 
     let mut now = Instant::now();
-    let (nodes, hist) = generate_maze(
-        args.width,
-        args.height,
-        args.method,
-        Some(MazeWrap::Full),
-        &mut rng,
-    );
+    let (nodes, hist) = generate_maze(args.width, args.height, args.method, args.wrap, &mut rng);
     let maze_time = now.elapsed();
 
     now = Instant::now();
