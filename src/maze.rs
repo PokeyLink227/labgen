@@ -1,5 +1,3 @@
-use rand;
-use rand::rngs::StdRng;
 use rand::{seq::SliceRandom, Rng};
 use std::{
     array,
@@ -41,9 +39,14 @@ impl Point {
         .into_iter()
     }
 
-    pub fn adjacent_wrapped(self, width: u16, height: u16) -> array::IntoIter<Point, 4> {
+    pub fn adjacent_wrapped(
+        self,
+        dir: MazeWrap,
+        width: u16,
+        height: u16,
+    ) -> array::IntoIter<Point, 4> {
         [
-            if self.y - 1 < 0 {
+            if self.y - 1 < 0 && (dir == MazeWrap::Full || dir == MazeWrap::Vertical) {
                 Point {
                     x: self.x,
                     y: height as i16 - 1,
@@ -51,17 +54,18 @@ impl Point {
             } else {
                 self + Point { x: 0, y: -1 }
             },
-            if self.x + 1 >= width as i16 {
+            if self.x + 1 >= width as i16 && (dir == MazeWrap::Full || dir == MazeWrap::Horizontal)
+            {
                 Point { x: 0, y: self.y }
             } else {
                 self + Point { x: 1, y: 0 }
             },
-            if self.x + 1 >= height as i16 {
+            if self.y + 1 >= height as i16 && (dir == MazeWrap::Full || dir == MazeWrap::Vertical) {
                 Point { x: self.x, y: 0 }
             } else {
                 self + Point { x: 0, y: 1 }
             },
-            if self.x - 1 < 0 {
+            if self.x - 1 < 0 && (dir == MazeWrap::Full || dir == MazeWrap::Horizontal) {
                 Point {
                     x: width as i16 - 1,
                     y: self.y,
@@ -238,13 +242,13 @@ pub fn generate_maze(
 ) -> (Grid, Vec<(Point, Direction)>) {
     let maze: Grid = Grid {
         tiles: vec![Tile::default(); width as usize * height as usize],
-        width: width,
-        height: height,
+        width,
+        height,
     };
 
     match mtype {
-        MazeType::Backtrack => create_maze_backtrack(maze, Some(MazeWrap::Full), rng),
-        MazeType::Prim => create_maze_prim(maze, rng),
+        MazeType::Backtrack => create_maze_backtrack(maze, wrap, rng),
+        MazeType::Prim => create_maze_prim(maze, wrap, rng),
         MazeType::BinaryTree => create_maze_binary(maze, rng),
         MazeType::Sidewinder => create_maze_sidewinder(maze, rng),
         MazeType::Noise => create_maze_noise(maze, rng),
@@ -254,7 +258,11 @@ pub fn generate_maze(
     }
 }
 
-fn create_maze_backtrack(mut maze: Grid, wrap: Option<MazeWrap>, rng: &mut impl Rng) -> (Grid, Vec<(Point, Direction)>) {
+fn create_maze_backtrack(
+    mut maze: Grid,
+    wrap: Option<MazeWrap>,
+    rng: &mut impl Rng,
+) -> (Grid, Vec<(Point, Direction)>) {
     let mut stack: Vec<Point> = Vec::new();
     let mut pos: Point = Point::new(
         rng.gen_range(0..maze.width) as i16,
@@ -268,10 +276,9 @@ fn create_maze_backtrack(mut maze: Grid, wrap: Option<MazeWrap>, rng: &mut impl 
 
     while !stack.is_empty() {
         let adj = match wrap {
-            Some(_) => pos.adjacent_wrapped(maze.width, maze.height),
+            Some(w) => pos.adjacent_wrapped(w, maze.width, maze.height),
             None => pos.adjacent(),
         };
-
         let next = adj
             .enumerate()
             .filter(|(_, x)| {
@@ -302,7 +309,11 @@ fn create_maze_backtrack(mut maze: Grid, wrap: Option<MazeWrap>, rng: &mut impl 
     (maze, history)
 }
 
-fn create_maze_prim(mut maze: Grid, rng: &mut impl Rng) -> (Grid, Vec<(Point, Direction)>) {
+fn create_maze_prim(
+    mut maze: Grid,
+    wrap: Option<MazeWrap>,
+    rng: &mut impl Rng,
+) -> (Grid, Vec<(Point, Direction)>) {
     let mut open_tiles: Vec<Point> = Vec::new();
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
     let mut pos: Point = Point::new(
@@ -318,16 +329,18 @@ fn create_maze_prim(mut maze: Grid, rng: &mut impl Rng) -> (Grid, Vec<(Point, Di
         let current_tile_index: usize = rng.gen_range(0..open_tiles.len());
         pos = open_tiles[current_tile_index];
 
-        let next = pick_random(
-            pos.adjacent()
-                .enumerate()
-                .filter(|(_, x)| {
-                    maze.contains(*x) && maze.get_tile(*x).status == ConnectionStatus::UnVisited
-                })
-                .collect::<Vec<(usize, Point)>>()
-                .as_ref(),
-            rng,
-        );
+        let adj = match wrap {
+            Some(w) => pos.adjacent_wrapped(w, maze.width, maze.height),
+            None => pos.adjacent(),
+        };
+        let next = adj
+            .enumerate()
+            .filter(|(_, x)| {
+                maze.contains(*x) && maze.get_tile(*x).status == ConnectionStatus::UnVisited
+            })
+            .collect::<Vec<(usize, Point)>>()
+            .choose(rng)
+            .copied();
 
         match next {
             None => {

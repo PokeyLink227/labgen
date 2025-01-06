@@ -1,6 +1,6 @@
-use crate::maze::{ConnectionStatus, Direction, Grid, Point};
+use crate::maze::{Direction, Grid, Point};
 use gif::{DisposalMethod, Encoder, Frame, Repeat};
-use std::{borrow::Cow, fs::File, io::BufWriter, path::Path};
+use std::{borrow::Cow, fs::File, io::BufWriter};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ImageOptions {
