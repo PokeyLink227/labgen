@@ -80,7 +80,7 @@ fn main() {
     let mut rng: StdRng = StdRng::seed_from_u64(seed);
 
     let mut now = Instant::now();
-    let (nodes, hist) = generate_maze(args.width, args.height, args.method, &mut rng);
+    let (nodes, hist) = generate_maze(args.width, args.height, args.method, None, &mut rng);
     let maze_time = now.elapsed();
 
     now = Instant::now();
