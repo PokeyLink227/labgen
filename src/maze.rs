@@ -116,6 +116,15 @@ pub enum MazeType {
     Kruskal,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, clap::ValueEnum)]
+#[repr(u8)]
+pub enum MazeWrap {
+    #[default]
+    Full,
+    Horizontal,
+    Vertical,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Direction {
@@ -218,6 +227,7 @@ pub fn generate_maze(
     width: u16,
     height: u16,
     mtype: MazeType,
+    wrap: Option<MazeWrap>,
     rng: &mut impl Rng,
 ) -> (Grid, Vec<(Point, Direction)>) {
     let maze: Grid = Grid {
