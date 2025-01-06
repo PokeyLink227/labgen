@@ -1,7 +1,10 @@
 use rand;
 use rand::rngs::StdRng;
 use rand::Rng;
-use std::ops::{Add, AddAssign};
+use std::{
+    array,
+    ops::{Add, AddAssign},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Point {
@@ -28,13 +31,40 @@ impl AddAssign for Point {
 }
 
 impl Point {
-    pub fn adjacent(self) -> [Point; 4] {
+    pub fn adjacent(self) -> array::IntoIter<Point, 4> {
         [
             self + Point { x: 0, y: -1 },
             self + Point { x: 1, y: 0 },
             self + Point { x: 0, y: 1 },
             self + Point { x: -1, y: 0 },
         ]
+        .into_iter()
+    }
+
+    pub fn adjacent_wrapped(self, width: u16, height: u16) -> array::IntoIter<Point, 4> {
+        [
+            if self.y - 1 < 0 {
+                Point { x: self.x, y: height as i16 - 1 }
+            } else {
+                self + Point { x: 0, y: -1 }
+            },
+            if self.x + 1 >= width as i16 {
+                Point { x: 0, y: self.y }
+            } else {
+                self + Point { x: 1, y: 0 }
+            },
+            if self.x + 1 >= height as i16 {
+                Point { x: self.x, y: 0 }
+            } else {
+                self + Point { x: 0, y: 1 }
+            },
+            if self.x - 1 < 0 {
+                Point { x: width as i16 - 1, y: self.y }
+            } else {
+                self + Point { x: -1, y: 0 }
+            },
+        ]
+        .into_iter()
     }
 
     pub fn travel(self, dir: Direction) -> Self {
@@ -176,7 +206,7 @@ fn opposite(src: u8) -> u8 {
     ((src << 2) | (src >> 2)) & 0b1111
 }
 
-fn pick_random(points: &[(usize, Point)], rng: &mut StdRng) -> Option<(usize, Point)> {
+fn pick_random(points: &[(usize, Point)], rng: &mut impl Rng) -> Option<(usize, Point)> {
     if points.len() > 0 {
         Some(points[rng.gen_range(0..points.len())])
     } else {
@@ -188,7 +218,7 @@ pub fn generate_maze(
     width: u16,
     height: u16,
     mtype: MazeType,
-    rng: &mut StdRng,
+    rng: &mut impl Rng,
 ) -> (Grid, Vec<(Point, Direction)>) {
     let maze: Grid = Grid {
         tiles: vec![Tile::default(); width as usize * height as usize],
@@ -208,7 +238,7 @@ pub fn generate_maze(
     }
 }
 
-fn create_maze_backtrack(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Direction)>) {
+fn create_maze_backtrack(mut maze: Grid, rng: &mut impl Rng) -> (Grid, Vec<(Point, Direction)>) {
     let mut stack: Vec<Point> = Vec::new();
     let mut pos: Point = Point::new(
         rng.gen_range(0..maze.width) as i16,
@@ -222,8 +252,7 @@ fn create_maze_backtrack(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point,
 
     while !stack.is_empty() {
         let next = pick_random(
-            pos.adjacent()
-                .into_iter()
+            pos.adjacent_wrapped(maze.width, maze.height)
                 .enumerate()
                 .filter(|(_, x)| {
                     maze.contains(*x) && maze.get_tile(*x).status == ConnectionStatus::UnVisited
@@ -254,7 +283,7 @@ fn create_maze_backtrack(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point,
     (maze, history)
 }
 
-fn create_maze_prim(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Direction)>) {
+fn create_maze_prim(mut maze: Grid, rng: &mut impl Rng) -> (Grid, Vec<(Point, Direction)>) {
     let mut open_tiles: Vec<Point> = Vec::new();
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
     let mut pos: Point = Point::new(
@@ -272,7 +301,6 @@ fn create_maze_prim(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Dire
 
         let next = pick_random(
             pos.adjacent()
-                .into_iter()
                 .enumerate()
                 .filter(|(_, x)| {
                     maze.contains(*x) && maze.get_tile(*x).status == ConnectionStatus::UnVisited
@@ -303,7 +331,7 @@ fn create_maze_prim(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Dire
     (maze, history)
 }
 
-fn create_maze_binary(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Direction)>) {
+fn create_maze_binary(mut maze: Grid, rng: &mut impl Rng) -> (Grid, Vec<(Point, Direction)>) {
     use crate::maze::Direction::*;
 
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
@@ -339,7 +367,7 @@ fn create_maze_binary(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Di
     (maze, history)
 }
 
-fn create_maze_sidewinder(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Direction)>) {
+fn create_maze_sidewinder(mut maze: Grid, rng: &mut impl Rng) -> (Grid, Vec<(Point, Direction)>) {
     use crate::maze::Direction::*;
 
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len() * 3 / 2);
@@ -399,7 +427,7 @@ impl Default for GrowingTreeBias {
 
 fn create_maze_growingtree(
     mut maze: Grid,
-    rng: &mut StdRng,
+    rng: &mut impl Rng,
     bias: GrowingTreeBias,
 ) -> (Grid, Vec<(Point, Direction)>) {
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
@@ -426,7 +454,6 @@ fn create_maze_growingtree(
         let next = pick_random(
             selected
                 .adjacent()
-                .into_iter()
                 .enumerate()
                 .filter(|(_, x)| {
                     maze.contains(*x) && maze.get_tile(*x).status == ConnectionStatus::UnVisited
@@ -457,7 +484,7 @@ fn create_maze_growingtree(
     (maze, history)
 }
 
-fn create_maze_wilson(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Direction)>) {
+fn create_maze_wilson(mut maze: Grid, rng: &mut impl Rng) -> (Grid, Vec<(Point, Direction)>) {
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
     let mut reservoir: Vec<Point> = Vec::with_capacity(maze.tiles.len());
 
@@ -493,7 +520,6 @@ fn create_maze_wilson(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Di
         while maze.get_tile(pos).status != ConnectionStatus::InMaze {
             let next = pick_random(
                 pos.adjacent()
-                    .into_iter()
                     .enumerate()
                     .filter(|(_, x)| maze.contains(*x))
                     .collect::<Vec<(usize, Point)>>()
@@ -527,7 +553,7 @@ fn create_maze_wilson(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Di
 }
 
 // merge_sets 60x faster than simple array and 600x faster with set_lookup_flatten
-fn create_maze_kruskal(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Direction)>) {
+fn create_maze_kruskal(mut maze: Grid, rng: &mut impl Rng) -> (Grid, Vec<(Point, Direction)>) {
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
     let mut edges: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len() * 2);
     let mut region_map: Vec<u32> = (0..maze.tiles.len() as u32).collect();
@@ -632,7 +658,7 @@ fn generate_noise(
     world_height: u16,
     grid_width: u16,
     grid_height: u16,
-    rng: &mut StdRng,
+    rng: &mut impl Rng,
 ) -> Vec<f32> {
     // can over-estimate length and be fine
     let cell_width = if world_width % (grid_width - 1) == 0 {
@@ -760,7 +786,7 @@ fn generate_noise(
     points
 }
 
-fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point, rng: &mut StdRng) {
+fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point, rng: &mut impl Rng) {
     if pos.x >= maze.width as i16 || pos.y >= maze.height as i16 {
         return;
     }
@@ -783,7 +809,6 @@ fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point, rng: &m
 
         let next = pick_random(
             pos.adjacent()
-                .into_iter()
                 .enumerate()
                 .filter(|(_, x)| {
                     maze.contains(*x)
@@ -813,7 +838,7 @@ fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point, rng: &m
     }
 }
 
-fn flood_tile_backtrack(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point, rng: &mut StdRng) {
+fn flood_tile_backtrack(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point, rng: &mut impl Rng) {
     if pos.x >= maze.width as i16 || pos.y >= maze.height as i16 {
         return;
     }
@@ -834,7 +859,6 @@ fn flood_tile_backtrack(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point, rn
     while !tile_stack.is_empty() {
         let next = pick_random(
             pos.adjacent()
-                .into_iter()
                 .enumerate()
                 .filter(|(_, x)| {
                     maze.contains(*x)
@@ -865,7 +889,7 @@ fn flood_tile_backtrack(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point, rn
     }
 }
 
-fn create_maze_noise(mut maze: Grid, rng: &mut StdRng) -> (Grid, Vec<(Point, Direction)>) {
+fn create_maze_noise(mut maze: Grid, rng: &mut impl Rng) -> (Grid, Vec<(Point, Direction)>) {
     let noise_map: Vec<u8> = generate_noise(maze.width, maze.height, 7, 7, rng)
         .iter()
         .map(|x| if *x < 0.0 { 0 } else { 1 })

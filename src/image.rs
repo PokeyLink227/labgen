@@ -234,6 +234,27 @@ pub fn generate_png(maze: &Grid, opts: &ImageOptions) {
                     }
                 }
             }
+            // only needed for wrapping mazes
+            // only chekc on edges to reduce overdraw
+            if px == 0 {
+                if connections & Direction::West as u8 != 0 {
+                    for y in 0..opts.passage_width {
+                        for x in 0..=opts.wall_width {
+                            pixels[(left - x) as usize + ((y + top) as usize * width as usize)] = 1;
+                        }
+                    }
+                }
+            }
+
+            if py == 0 {
+                if connections & Direction::North as u8 != 0 {
+                    for y in 0..=opts.wall_width {
+                        for x in 0..opts.passage_width {
+                            pixels[(x + left) as usize + ((top - y) as usize * width as usize)] = 1;
+                        }
+                    }
+                }
+            }
         }
     }
 
