@@ -10,3 +10,17 @@ each floodfill function will only return under 2 conditions
 2. space is full
 
 so always swap algo on return and additionally keep track of total nodes visited
+
+
+## Compatability
+
+|  Maze Type | Wrapping | Exclusions | Rooms |
+|------------|----------|------------|-------|
+| backtrack | yes | yes | no |
+| prim | yes | yes | no |
+| binary-tree | no | no | no|
+| sidewinder | no | no | no |
+| noise | no | no | no |
+| growing-tree | yes | yes | no |
+| wilsons | no | no | no |
+| kruskal | no | no | no |
