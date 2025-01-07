@@ -436,15 +436,19 @@ fn create_maze_sidewinder(mut maze: Grid, rng: &mut impl Rng) -> (Grid, Vec<(Poi
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len() * 3 / 2);
 
     maze.get_tile_mut(Point { x: 0, y: 0 }).connect(East);
+    maze.get_tile_mut(Point::new(0, 0)).status = ConnectionStatus::InMaze;
     history.push((Point { x: 0, y: 0 }, NoDir));
 
     for x in 1..(maze.width - 1) as i16 {
         maze.get_tile_mut(Point { x: x, y: 0 }).connections |= East as u8 | West as u8;
+        maze.get_tile_mut(Point::new(x, 0)).status = ConnectionStatus::InMaze;
         history.push((Point { x: x, y: 0 }, West));
     }
 
     maze.get_tile_mut(Point::new((maze.width - 1) as i16, 0))
         .connect(West);
+    maze.get_tile_mut(Point::new((maze.width - 1) as i16, 0))
+        .status = ConnectionStatus::InMaze;
     history.push((Point::new((maze.width - 1) as i16, 0), West));
 
     for y in 1..maze.height as i16 {
@@ -452,12 +456,13 @@ fn create_maze_sidewinder(mut maze: Grid, rng: &mut impl Rng) -> (Grid, Vec<(Poi
         for x in 0..maze.width as i16 {
             if rng.gen::<bool>() && (x as u16) < maze.width - 1 {
                 maze.get_tile_mut(Point::new(x, y)).connect(East);
-                maze.get_tile_mut(Point::new(x + 1, y)).connect(West);
                 maze.get_tile_mut(Point::new(x, y)).status = ConnectionStatus::InMaze;
+                maze.get_tile_mut(Point::new(x + 1, y)).connect(West);
                 history.push((Point::new(x, y), East));
             } else {
+                maze.get_tile_mut(Point::new(x, y)).status = ConnectionStatus::InMaze;
+
                 if maze.get_tile(Point::new(x, y)).connected(West) {
-                    maze.get_tile_mut(Point::new(x, y)).status = ConnectionStatus::InMaze;
                     history.push((Point::new(x, y), West));
                 }
 
