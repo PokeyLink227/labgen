@@ -281,8 +281,10 @@ pub fn generate_maze(
         MazeType::BinaryTree => create_maze_binary(maze, rng),
         MazeType::Sidewinder => create_maze_sidewinder(maze, rng),
         MazeType::Noise => create_maze_noise(maze, rng),
-        MazeType::GrowingTree => create_maze_growingtree(maze, rng, GrowingTreeBias::Percent(10)),
-        MazeType::Wilson => create_maze_wilson(maze, rng),
+        MazeType::GrowingTree => {
+            create_maze_growingtree(maze, wrap, GrowingTreeBias::Percent(10), rng)
+        }
+        MazeType::Wilson => create_maze_wilson(maze, wrap, rng),
         MazeType::Kruskal => create_maze_kruskal(maze, rng),
     }
 }
@@ -488,8 +490,9 @@ impl Default for GrowingTreeBias {
 
 fn create_maze_growingtree(
     mut maze: Grid,
-    rng: &mut impl Rng,
+    wrap: Option<MazeWrap>,
     bias: GrowingTreeBias,
+    rng: &mut impl Rng,
 ) -> (Grid, Vec<(Point, Direction)>) {
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
     let mut open: Vec<Point> = Vec::new();
@@ -512,17 +515,18 @@ fn create_maze_growingtree(
             }
         };
         let selected = open[selected_index];
-        let next = pick_random(
-            selected
-                .adjacent()
-                .enumerate()
-                .filter(|(_, x)| {
-                    maze.contains(*x) && maze.get_tile(*x).status == ConnectionStatus::UnVisited
-                })
-                .collect::<Vec<(usize, Point)>>()
-                .as_ref(),
-            rng,
-        );
+        let adj = match wrap {
+            Some(w) => pos.adjacent_wrapped(w, maze.width, maze.height),
+            None => pos.adjacent(),
+        };
+        let next = adj
+            .enumerate()
+            .filter(|(_, x)| {
+                maze.contains(*x) && maze.get_tile(*x).status == ConnectionStatus::UnVisited
+            })
+            .collect::<Vec<(usize, Point)>>()
+            .choose(rng)
+            .copied();
 
         match next {
             None => {
@@ -545,7 +549,11 @@ fn create_maze_growingtree(
     (maze, history)
 }
 
-fn create_maze_wilson(mut maze: Grid, rng: &mut impl Rng) -> (Grid, Vec<(Point, Direction)>) {
+fn create_maze_wilson(
+    mut maze: Grid,
+    wrap: Option<MazeWrap>,
+    rng: &mut impl Rng,
+) -> (Grid, Vec<(Point, Direction)>) {
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
     let mut reservoir: Vec<Point> = Vec::with_capacity(maze.tiles.len());
 
@@ -579,15 +587,19 @@ fn create_maze_wilson(mut maze: Grid, rng: &mut impl Rng) -> (Grid, Vec<(Point, 
         // start a random loop erased walk from the chosen cell
         maze.get_tile_mut(pos).status = ConnectionStatus::Visited;
         while maze.get_tile(pos).status != ConnectionStatus::InMaze {
-            let next = pick_random(
-                pos.adjacent()
-                    .enumerate()
-                    .filter(|(_, x)| maze.contains(*x))
-                    .collect::<Vec<(usize, Point)>>()
-                    .as_ref(),
-                rng,
-            )
-            .unwrap(); // safe to unwrap because a cell will always have at least 2 adjacent cells in the maze
+            let adj = match wrap {
+                Some(w) => pos.adjacent_wrapped(w, maze.width, maze.height),
+                None => pos.adjacent(),
+            };
+            let next = adj
+                .enumerate()
+                .filter(|(_, x)| {
+                    maze.contains(*x) && maze.get_tile(*x).status == ConnectionStatus::UnVisited
+                })
+                .collect::<Vec<(usize, Point)>>()
+                .choose(rng)
+                .copied()
+                .unwrap(); // safe to unwrap because a cell will always have at least 2 adjacent cells in the maze
 
             let dir = 0b0001 << next.0;
             maze.get_tile_mut(pos).set_connected(dir.into());
