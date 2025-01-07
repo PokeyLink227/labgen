@@ -171,13 +171,22 @@ impl From<u8> for Direction {
 
 impl Direction {
     pub fn opposite(self) -> Self {
-        match self {
-            Direction::North => Direction::South,
-            Direction::East => Direction::West,
-            Direction::South => Direction::North,
-            Direction::West => Direction::East,
-            Direction::NoDir => Direction::NoDir,
-        }
+        ((((self as u8) << 2) | ((self as u8) >> 2)) & 0b1111).into()
+        /*
+                match self {
+                    Direction::North => Direction::South,
+                    Direction::East => Direction::West,
+                    Direction::South => Direction::North,
+                    Direction::West => Direction::East,
+                    Direction::NoDir => Direction::NoDir,
+                }
+        */
+    }
+
+    // constructs a direction by starting at north and rotation clockwise
+    // until a desired direction is reached
+    pub fn from_clock(rot: u8) -> Self {
+        (0b00000001 << rot).into()
     }
 }
 
@@ -233,9 +242,11 @@ impl Grid {
     }
 }
 
+/*
 fn opposite(src: u8) -> u8 {
     ((src << 2) | (src >> 2)) & 0b1111
 }
+*/
 
 fn pick_random(points: &[(usize, Point)], rng: &mut impl Rng) -> Option<(usize, Point)> {
     if points.len() > 0 {
@@ -281,9 +292,7 @@ pub fn generate_maze(
         MazeType::BinaryTree => create_maze_binary(maze, rng),
         MazeType::Sidewinder => create_maze_sidewinder(maze, rng),
         MazeType::Noise => create_maze_noise(maze, rng),
-        MazeType::GrowingTree => {
-            create_maze_growingtree(maze, wrap, GrowingTreeBias::Percent(10), rng)
-        }
+        MazeType::GrowingTree => create_maze_growingtree(maze, wrap, GrowingTreeBias::Newest, rng),
         MazeType::Wilson => create_maze_wilson(maze, wrap, rng),
         MazeType::Kruskal => create_maze_kruskal(maze, rng),
     }
@@ -324,15 +333,15 @@ fn create_maze_backtrack(
                 pos = stack.pop().unwrap();
             }
             Some(next) => {
-                let dir = 0b0001 << next.0;
-                maze.get_tile_mut(pos).connect(dir.into());
+                let dir = Direction::from_clock(next.0 as u8);
+                maze.get_tile_mut(pos).connect(dir);
 
                 pos = next.1;
-                maze.get_tile_mut(pos).connect(opposite(dir).into());
+                maze.get_tile_mut(pos).connect(dir.opposite());
                 maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
 
                 stack.push(pos);
-                history.push((pos, opposite(dir).into()));
+                history.push((pos, dir.opposite()));
             }
         }
     }
@@ -378,15 +387,15 @@ fn create_maze_prim(
                 open_tiles.swap_remove(current_tile_index);
             }
             Some(next) => {
-                let dir = 0b0001 << next.0;
-                maze.get_tile_mut(pos).connect(dir.into());
+                let dir = Direction::from_clock(next.0 as u8);
+                maze.get_tile_mut(pos).connect(dir);
 
                 pos = next.1;
-                maze.get_tile_mut(pos).connect(opposite(dir).into());
+                maze.get_tile_mut(pos).connect(dir.opposite());
                 maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
 
                 open_tiles.push(pos);
-                history.push((pos, opposite(dir).into()));
+                history.push((pos, dir.opposite()));
             }
         }
     }
@@ -521,8 +530,8 @@ fn create_maze_growingtree(
         };
         let selected = open[selected_index];
         let adj = match wrap {
-            Some(w) => pos.adjacent_wrapped(w, maze.width, maze.height),
-            None => pos.adjacent(),
+            Some(w) => selected.adjacent_wrapped(w, maze.width, maze.height),
+            None => selected.adjacent(),
         };
         let next = adj
             .enumerate()
@@ -538,15 +547,15 @@ fn create_maze_growingtree(
                 open.remove(selected_index);
             }
             Some(next) => {
-                let dir = 0b0001 << next.0;
-                maze.get_tile_mut(selected).connect(dir.into());
+                let dir = Direction::from_clock(next.0 as u8);
+                maze.get_tile_mut(selected).connect(dir);
 
                 let selected = next.1;
-                maze.get_tile_mut(selected).connect(opposite(dir).into());
+                maze.get_tile_mut(selected).connect(dir.opposite());
                 maze.get_tile_mut(selected).status = ConnectionStatus::InMaze;
 
                 open.push(selected);
-                history.push((selected, opposite(dir).into()));
+                history.push((selected, dir.opposite()));
             }
         }
     }
@@ -598,33 +607,32 @@ fn create_maze_wilson(
             };
             let next = adj
                 .enumerate()
-                .filter(|(_, x)| {
-                    maze.contains(*x) && maze.get_tile(*x).status == ConnectionStatus::UnVisited
-                })
+                .filter(|(_, x)| maze.contains(*x))
                 .collect::<Vec<(usize, Point)>>()
                 .choose(rng)
                 .copied()
                 .unwrap(); // safe to unwrap because a cell will always have at least 2 adjacent cells in the maze
 
-            let dir = 0b0001 << next.0;
-            maze.get_tile_mut(pos).set_connected(dir.into());
+            let dir = Direction::from_clock(next.0 as u8);
+            maze.get_tile_mut(pos).set_connected(dir);
             maze.get_tile_mut(pos).status = ConnectionStatus::Visited;
             pos = next.1;
         }
 
         // carve the final path into the maze
         pos = anchor;
-        let mut dir = Direction::NoDir as u8;
+        let mut dir = Direction::NoDir;
         while maze.get_tile(pos).status != ConnectionStatus::InMaze {
-            let temp_dir = maze.get_tile(pos).connections;
+            // this line will panic if tile has multiple connections
+            let temp_dir = maze.get_tile(pos).connections.into();
             maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
-            maze.get_tile_mut(pos).connect(opposite(dir).into());
+            maze.get_tile_mut(pos).connect(dir.opposite());
             dir = temp_dir;
 
-            history.push((pos, dir.into()));
-            pos = pos.travel(dir.into());
+            history.push((pos, dir));
+            pos = pos.travel(dir);
         }
-        maze.get_tile_mut(pos).connect(opposite(dir).into());
+        maze.get_tile_mut(pos).connect(dir.opposite());
     }
 
     (maze, history)
@@ -903,11 +911,11 @@ fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point, rng: &m
                 open_tiles.swap_remove(current_tile_index);
             }
             Some(next) => {
-                maze.get_tile_mut(pos).connect((0b0001 << next.0).into());
+                let dir = Direction::from_clock(next.0 as u8);
+                maze.get_tile_mut(pos).connect(dir);
 
                 pos = next.1;
-                maze.get_tile_mut(pos)
-                    .connect(opposite(0b0001 << next.0).into());
+                maze.get_tile_mut(pos).connect(dir.opposite());
                 maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
 
                 open_tiles.push(pos);
@@ -954,11 +962,11 @@ fn flood_tile_backtrack(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point, rn
                 pos = tile_stack.pop().unwrap();
             }
             Some(next) => {
-                maze.get_tile_mut(pos).connect((0b0001 << next.0).into());
+                let dir = Direction::from_clock(next.0 as u8);
+                maze.get_tile_mut(pos).connect(dir);
 
                 pos = next.1;
-                maze.get_tile_mut(pos)
-                    .connect(opposite(0b0001 << next.0).into());
+                maze.get_tile_mut(pos).connect(dir.opposite());
                 maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
 
                 tile_stack.push(pos);
