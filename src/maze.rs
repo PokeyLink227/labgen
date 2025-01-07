@@ -81,6 +81,49 @@ impl Point {
         }
     }
 
+    pub fn travel_wrapped(self, dir: Direction, width: u16, height: u16) -> Self {
+        match dir {
+            Direction::NoDir => self,
+            Direction::North => {
+                if self.y - 1 < 0 {
+                    Point::new(self.x, height as i16 - 1)
+                } else {
+                    self + Point { x: 0, y: -1 }
+                }
+            }
+            Direction::East => {
+                if self.x + 1 >= width as i16 {
+                    Point { x: 0, y: self.y }
+                } else {
+                    self + Point { x: 1, y: 0 }
+                }
+            }
+            Direction::South => {
+                if self.y + 1 >= height as i16 {
+                    Point { x: self.x, y: 0 }
+                } else {
+                    self + Point { x: 0, y: 1 }
+                }
+            }
+            Direction::West => {
+                if self.x - 1 < 0 {
+                    Point::new(width as i16 - 1, self.y)
+                } else {
+                    self + Point { x: -1, y: 0 }
+                }
+            }
+        }
+        /*
+                match dir {
+                    Direction::NoDir => self,
+                    Direction::North => self + Point { x: 0, y: -1 },
+                    Direction::East => self + Point { x: 1, y: 0 },
+                    Direction::South => self + Point { x: 0, y: 1 },
+                    Direction::West => self + Point { x: -1, y: 0 },
+                }
+        */
+    }
+
     pub fn new(x: i16, y: i16) -> Self {
         Self { x, y }
     }
@@ -630,7 +673,11 @@ fn create_maze_wilson(
             dir = temp_dir;
 
             history.push((pos, dir));
-            pos = pos.travel(dir);
+            if wrap.is_some() {
+                pos = pos.travel_wrapped(dir, maze.width, maze.height);
+            } else {
+                pos = pos.travel(dir);
+            }
         }
         maze.get_tile_mut(pos).connect(dir.opposite());
     }
