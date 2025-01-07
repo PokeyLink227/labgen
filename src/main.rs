@@ -2,7 +2,7 @@ use crate::{
     image::{
         generate_gif, generate_gif_uncompressed, generate_png, AnimationOptions, ImageOptions,
     },
-    maze::{generate_maze, MazeType, MazeWrap},
+    maze::{generate_maze, MazeType, MazeWrap, Rect},
 };
 use clap::Parser;
 use rand::{rngs::StdRng, SeedableRng};
@@ -83,8 +83,22 @@ fn main() {
     let seed: u64 = args.seed.unwrap_or(rand::random::<u64>());
     let mut rng: StdRng = StdRng::seed_from_u64(seed);
 
+    let exclude = vec![
+        Rect::new(2, 2, 4, 1),
+        Rect::new(0, 7, 3, 3),
+        Rect::new(10, 10, 2, 4),
+    ];
+
     let mut now = Instant::now();
-    let (nodes, hist) = generate_maze(args.width, args.height, args.method, args.wrap, &mut rng);
+    let (nodes, hist) = generate_maze(
+        args.width,
+        args.height,
+        args.method,
+        args.wrap,
+        &[],
+        &exclude,
+        &mut rng,
+    );
     let maze_time = now.elapsed();
 
     now = Instant::now();

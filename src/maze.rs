@@ -47,10 +47,7 @@ impl Point {
     ) -> array::IntoIter<Point, 4> {
         [
             if self.y - 1 < 0 && (dir == MazeWrap::Full || dir == MazeWrap::Vertical) {
-                Point {
-                    x: self.x,
-                    y: height as i16 - 1,
-                }
+                Point::new(self.x, height as i16 - 1)
             } else {
                 self + Point { x: 0, y: -1 }
             },
@@ -66,10 +63,7 @@ impl Point {
                 self + Point { x: 0, y: 1 }
             },
             if self.x - 1 < 0 && (dir == MazeWrap::Full || dir == MazeWrap::Horizontal) {
-                Point {
-                    x: width as i16 - 1,
-                    y: self.y,
-                }
+                Point::new(width as i16 - 1, self.y)
             } else {
                 self + Point { x: -1, y: 0 }
             },
@@ -93,6 +87,23 @@ impl Point {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Rect {
+    pub x: i16,
+    pub y: i16,
+    pub w: i16,
+    pub h: i16,
+}
+
+impl Rect {
+    pub fn new(x: i16, y: i16, w: i16, h: i16) -> Self {
+        assert_ne!(w, 0);
+        assert_ne!(h, 0);
+
+        Rect { x, y, w, h }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Vector2<T> {
     x: T,
     y: T,
@@ -110,6 +121,7 @@ pub enum ConnectionStatus {
     UnVisited,
     Visited,
     InMaze,
+    Removed,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, clap::ValueEnum)]
@@ -238,13 +250,30 @@ pub fn generate_maze(
     height: u16,
     mtype: MazeType,
     wrap: Option<MazeWrap>,
+    rooms: &[Rect],
+    exclusions: &[Rect],
     rng: &mut impl Rng,
 ) -> (Grid, Vec<(Point, Direction)>) {
-    let maze: Grid = Grid {
+    let mut maze: Grid = Grid {
         tiles: vec![Tile::default(); width as usize * height as usize],
         width,
         height,
     };
+
+    // remove all exclusions from the maze
+    for r in exclusions {
+        for y in r.y..(r.y + r.h) {
+            for x in r.x..(r.x + r.w) {
+                maze.set_tile(
+                    Point::new(x, y),
+                    Tile {
+                        status: ConnectionStatus::Removed,
+                        connections: Direction::NoDir as u8,
+                    },
+                );
+            }
+        }
+    }
 
     match mtype {
         MazeType::Backtrack => create_maze_backtrack(maze, wrap, rng),

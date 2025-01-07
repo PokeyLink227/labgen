@@ -1,4 +1,4 @@
-use crate::maze::{Direction, Grid, Point};
+use crate::maze::{ConnectionStatus, Direction, Grid, Point};
 use gif::{DisposalMethod, Encoder, Frame, Repeat};
 use std::{borrow::Cow, fs::File, io::BufWriter};
 
@@ -206,6 +206,17 @@ pub fn generate_png(maze: &Grid, opts: &ImageOptions) {
 
     for py in 0..maze.height {
         for px in 0..maze.width {
+            if maze
+                .get_tile(Point {
+                    x: px as i16,
+                    y: py as i16,
+                })
+                .status
+                != ConnectionStatus::InMaze
+            {
+                continue;
+            }
+
             let top: u16 = py as u16 * cell_width + opts.wall_width;
             let left: u16 = px as u16 * cell_width + opts.wall_width;
             let connections = maze
