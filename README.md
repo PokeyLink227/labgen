@@ -16,11 +16,11 @@ so always swap algo on return and additionally keep track of total nodes visited
 
 |  Maze Type | Wrapping | Exclusions | Rooms |
 |------------|----------|------------|-------|
-| backtrack | yes | yes | no |
-| prim | yes | yes | no |
-| binary-tree | no | no | no|
-| sidewinder | no | no | no |
-| noise | no | no | no |
-| growing-tree | yes | yes | no |
-| wilsons | yes | yes | no |
-| kruskal | no | no | no |
+| backtrack | ✅ | ✅  | ❌ |
+| prim | ✅ | ✅ | ❌ |
+| binary-tree | ❌ | ❌ | ❌|
+| sidewinder | ❌ | ❌ | ❌ |
+| noise | ❌ | ❌ | ❌ |
+| growing-tree | ✅ | ✅ | ❌ |
+| wilsons | ✅ | ✅ | ❌ |
+| kruskal | ❌ | ❌ | ❌ |
