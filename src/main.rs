@@ -87,6 +87,7 @@ fn main() {
         Rect::new(2, 2, 4, 1),
         Rect::new(2, 4, 4, 1),
         Rect::new(6, 2, 1, 3),
+        //Rect::new(0, 0, 15, 15),
     ];
 
     let mut now = Instant::now();

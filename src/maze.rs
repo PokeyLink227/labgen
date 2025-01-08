@@ -1,4 +1,4 @@
-use rand::{seq::SliceRandom, Rng};
+use rand::{seq::SliceRandom, seq::IteratorRandom, Rng};
 use std::{
     array,
     ops::{Add, AddAssign},
@@ -329,28 +329,62 @@ pub fn generate_maze(
         }
     }
 
+    // pick valid starting point for algos that need one
+    let mut start_pos = Point::new(0, 0);
+    let mut num_unvisited = 0;
     match mtype {
-        MazeType::Backtrack => create_maze_backtrack(maze, wrap, rng),
-        MazeType::Prim => create_maze_prim(maze, wrap, rng),
+        MazeType::Wilson | MazeType::Backtrack | MazeType::GrowingTree | MazeType::Prim => {
+            let mut reservoir: Vec<Point> = Vec::with_capacity(maze.tiles.len());
+
+            // generate reservoir
+            for y in 0..maze.height as i16 {
+                for x in 0..maze.width as i16 {
+                    reservoir.push(Point::new(x, y));
+                }
+            }
+            reservoir.shuffle(rng);
+
+            for pos in reservoir {
+                if maze.get_tile(pos).status == ConnectionStatus::UnVisited {
+                    start_pos = pos;
+                    num_unvisited += 1;
+                }
+            }
+
+        }
+        _ => {
+            num_unvisited = maze.tiles.iter().filter(|&x| x.status == ConnectionStatus::UnVisited).count();
+            start_pos = Point::new(0, 0);
+        }
+    };
+
+    // early return to ensure maze algos always recieve a maze with at least
+    // 1 unvisited cell
+    if num_unvisited < 1 {
+        return (maze, Vec::new());
+    }
+
+    // generate maze
+    match mtype {
+        MazeType::Backtrack => create_maze_backtrack(maze, start_pos, wrap, rng),
+        MazeType::Prim => create_maze_prim(maze, start_pos, wrap, rng),
         MazeType::BinaryTree => create_maze_binary(maze, rng),
         MazeType::Sidewinder => create_maze_sidewinder(maze, rng),
         MazeType::Noise => create_maze_noise(maze, rng),
-        MazeType::GrowingTree => create_maze_growingtree(maze, wrap, GrowingTreeBias::Newest, rng),
-        MazeType::Wilson => create_maze_wilson(maze, wrap, rng),
+        MazeType::GrowingTree => create_maze_growingtree(maze, start_pos, wrap, GrowingTreeBias::Newest, rng),
+        MazeType::Wilson => create_maze_wilson(maze, start_pos, wrap, rng),
         MazeType::Kruskal => create_maze_kruskal(maze, rng),
     }
 }
 
 fn create_maze_backtrack(
     mut maze: Grid,
+    start_pos: Point,
     wrap: Option<MazeWrap>,
     rng: &mut impl Rng,
 ) -> (Grid, Vec<(Point, Direction)>) {
     let mut stack: Vec<Point> = Vec::new();
-    let mut pos: Point = Point::new(
-        rng.gen_range(0..maze.width) as i16,
-        rng.gen_range(0..maze.height) as i16,
-    );
+    let mut pos = start_pos;
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
 
     maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
@@ -358,14 +392,16 @@ fn create_maze_backtrack(
     history.push((pos, Direction::NoDir.into()));
 
     while !stack.is_empty() {
+        pos = *stack.last().unwrap();
+
         let adj = match wrap {
             Some(w) => pos.adjacent_wrapped(w, maze.width, maze.height),
             None => pos.adjacent(),
         };
         let next = adj
             .enumerate()
-            .filter(|(_, x)| {
-                maze.contains(*x) && maze.get_tile(*x).status == ConnectionStatus::UnVisited
+            .filter(|&(_, x)| {
+                maze.contains(x) && maze.get_tile(x).status == ConnectionStatus::UnVisited
             })
             .collect::<Vec<(usize, Point)>>()
             .choose(rng)
@@ -373,7 +409,7 @@ fn create_maze_backtrack(
 
         match next {
             None => {
-                pos = stack.pop().unwrap();
+                stack.pop();
             }
             Some(next) => {
                 let dir = Direction::from_clock(next.0 as u8);
@@ -394,15 +430,13 @@ fn create_maze_backtrack(
 
 fn create_maze_prim(
     mut maze: Grid,
+    start_pos: Point,
     wrap: Option<MazeWrap>,
     rng: &mut impl Rng,
 ) -> (Grid, Vec<(Point, Direction)>) {
     let mut open_tiles: Vec<Point> = Vec::new();
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
-    let mut pos: Point = Point::new(
-        rng.gen_range(0..maze.width) as i16,
-        rng.gen_range(0..maze.height) as i16,
-    );
+    let mut pos = start_pos;
 
     maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
     open_tiles.push(pos);
@@ -418,8 +452,8 @@ fn create_maze_prim(
         };
         let next = adj
             .enumerate()
-            .filter(|(_, x)| {
-                maze.contains(*x) && maze.get_tile(*x).status == ConnectionStatus::UnVisited
+            .filter(|&(_, x)| {
+                maze.contains(x) && maze.get_tile(x).status == ConnectionStatus::UnVisited
             })
             .collect::<Vec<(usize, Point)>>()
             .choose(rng)
@@ -547,6 +581,7 @@ impl Default for GrowingTreeBias {
 
 fn create_maze_growingtree(
     mut maze: Grid,
+    start_pos: Point,
     wrap: Option<MazeWrap>,
     bias: GrowingTreeBias,
     rng: &mut impl Rng,
@@ -554,13 +589,9 @@ fn create_maze_growingtree(
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
     let mut open: Vec<Point> = Vec::new();
 
-    let pos = Point::new(
-        rng.gen_range(0..maze.width) as i16,
-        rng.gen_range(0..maze.height) as i16,
-    );
-    maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
-    history.push((pos, Direction::NoDir));
-    open.push(pos);
+    maze.get_tile_mut(start_pos).status = ConnectionStatus::InMaze;
+    history.push((start_pos, Direction::NoDir));
+    open.push(start_pos);
 
     while !open.is_empty() {
         let selected_index = match bias {
@@ -578,8 +609,8 @@ fn create_maze_growingtree(
         };
         let next = adj
             .enumerate()
-            .filter(|(_, x)| {
-                maze.contains(*x) && maze.get_tile(*x).status == ConnectionStatus::UnVisited
+            .filter(|&(_, x)| {
+                maze.contains(x) && maze.get_tile(x).status == ConnectionStatus::UnVisited
             })
             .collect::<Vec<(usize, Point)>>()
             .choose(rng)
@@ -608,6 +639,7 @@ fn create_maze_growingtree(
 
 fn create_maze_wilson(
     mut maze: Grid,
+    start_pos: Point,
     wrap: Option<MazeWrap>,
     rng: &mut impl Rng,
 ) -> (Grid, Vec<(Point, Direction)>) {
@@ -617,23 +649,14 @@ fn create_maze_wilson(
     // generate reservoir
     for y in 0..maze.height as i16 {
         for x in 0..maze.width as i16 {
-            reservoir.push(Point::new(x, y));
+            if start_pos != Point::new(x, y) {
+                reservoir.push(Point::new(x, y));
+            }
         }
     }
-    for i in 0..reservoir.len() {
-        let index = rng.gen_range(i..reservoir.len());
-        let temp = reservoir[i];
-        reservoir[i] = reservoir[index];
-        reservoir[index] = temp;
-    }
+    reservoir.shuffle(rng);
 
-    let mut anchor = reservoir.pop().unwrap();
-    while maze.get_tile(anchor).status != ConnectionStatus::UnVisited {
-        anchor = match reservoir.pop() {
-            Some(v) => v,
-            None => return (maze, history),
-        }
-    }
+    let mut anchor = start_pos;
     maze.get_tile_mut(anchor).status = ConnectionStatus::InMaze;
     history.push((anchor, Direction::NoDir));
 
@@ -947,9 +970,9 @@ fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point, rng: &m
         let next = pick_random(
             pos.adjacent()
                 .enumerate()
-                .filter(|(_, x)| {
-                    maze.contains(*x)
-                        && maze.get_tile(*x).status == ConnectionStatus::UnVisited
+                .filter(|&(_, x)| {
+                    maze.contains(x)
+                        && maze.get_tile(x).status == ConnectionStatus::UnVisited
                         && noise_map[(x.x + x.y * maze.width as i16) as usize] == 1
                 })
                 .collect::<Vec<(usize, Point)>>()
@@ -997,9 +1020,9 @@ fn flood_tile_backtrack(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point, rn
         let next = pick_random(
             pos.adjacent()
                 .enumerate()
-                .filter(|(_, x)| {
-                    maze.contains(*x)
-                        && maze.get_tile(*x).status == ConnectionStatus::UnVisited
+                .filter(|&(_, x)| {
+                    maze.contains(x)
+                        && maze.get_tile(x).status == ConnectionStatus::UnVisited
                         && noise_map[(x.x + x.y * maze.width as i16) as usize] == 1
                 })
                 .collect::<Vec<(usize, Point)>>()
