@@ -628,12 +628,18 @@ fn create_maze_wilson(
     }
 
     let mut anchor = reservoir.pop().unwrap();
+    while maze.get_tile(anchor).status != ConnectionStatus::UnVisited {
+        anchor = match reservoir.pop() {
+            Some(v) => v,
+            None => return (maze, history),
+        }
+    }
     maze.get_tile_mut(anchor).status = ConnectionStatus::InMaze;
     history.push((anchor, Direction::NoDir));
 
     'outer: while !reservoir.is_empty() {
         // pick a cell not already in the maze
-        while maze.get_tile(anchor).status == ConnectionStatus::InMaze {
+        while maze.get_tile(anchor).status != ConnectionStatus::UnVisited {
             anchor = match reservoir.pop() {
                 Some(v) => v,
                 None => break 'outer,
@@ -642,23 +648,21 @@ fn create_maze_wilson(
         let mut pos = anchor;
 
         // start a random loop erased walk from the chosen cell
-        maze.get_tile_mut(pos).status = ConnectionStatus::Visited;
-        while maze.get_tile(pos).status != ConnectionStatus::InMaze {
+        while maze.get_tile(pos).status == ConnectionStatus::UnVisited {
             let adj = match wrap {
                 Some(w) => pos.adjacent_wrapped(w, maze.width, maze.height),
                 None => pos.adjacent(),
             };
             let next = adj
                 .enumerate()
-                .filter(|(_, x)| maze.contains(*x))
+                .filter(|&(_, x)| maze.contains(x) && maze.get_tile(x).status != ConnectionStatus::Removed)
                 .collect::<Vec<(usize, Point)>>()
                 .choose(rng)
                 .copied()
-                .unwrap(); // safe to unwrap because a cell will always have at least 2 adjacent cells in the maze
+                .unwrap(); // safe to unwrap because a cell will always have at least 1 adjacent cell in the maze
 
             let dir = Direction::from_clock(next.0 as u8);
             maze.get_tile_mut(pos).set_connected(dir);
-            maze.get_tile_mut(pos).status = ConnectionStatus::Visited;
             pos = next.1;
         }
 

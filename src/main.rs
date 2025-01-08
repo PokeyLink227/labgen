@@ -85,8 +85,8 @@ fn main() {
 
     let exclude = vec![
         Rect::new(2, 2, 4, 1),
-        Rect::new(0, 7, 3, 3),
-        Rect::new(10, 10, 2, 4),
+        Rect::new(2, 4, 4, 1),
+        Rect::new(6, 2, 1, 3),
     ];
 
     let mut now = Instant::now();
