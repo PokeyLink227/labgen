@@ -12,7 +12,7 @@ each floodfill function will only return under 2 conditions
 so always swap algo on return and additionally keep track of total nodes visited
 
 
-## Compatability
+## Feature Compatability
 
 |  Maze Type | Wrapping | Exclusions | Rooms |
 |------------|----------|------------|-------|
