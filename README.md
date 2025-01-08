@@ -22,5 +22,5 @@ so always swap algo on return and additionally keep track of total nodes visited
 | sidewinder | no | no | no |
 | noise | no | no | no |
 | growing-tree | yes | yes | no |
-| wilsons | yes | no | no |
+| wilsons | yes | yes | no |
 | kruskal | no | no | no |
