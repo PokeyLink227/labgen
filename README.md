@@ -10,4 +10,4 @@
 | noise | ❌ | ❌ | ❌ |
 | growing-tree | ✅ | ✅ | ❌ |
 | wilsons | ✅ | ✅ | ❌ |
-| kruskal | ❌ | ✅ | ❌ |
+| kruskal | ✅ | ✅ | ❌ |

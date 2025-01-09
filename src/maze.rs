@@ -378,7 +378,7 @@ pub fn generate_maze(
             create_maze_growingtree(maze, start_pos, wrap, GrowingTreeBias::Newest, rng)
         }
         MazeType::Wilson => create_maze_wilson(maze, start_pos, wrap, rng),
-        MazeType::Kruskal => create_maze_kruskal(maze, rng),
+        MazeType::Kruskal => create_maze_kruskal(maze, wrap, rng),
     }
 }
 
@@ -729,7 +729,11 @@ fn create_maze_wilson(
 }
 
 // merge_sets 60x faster than simple array and 600x faster with set_lookup_flatten
-fn create_maze_kruskal(mut maze: Grid, rng: &mut impl Rng) -> (Grid, Vec<(Point, Direction)>) {
+fn create_maze_kruskal(
+    mut maze: Grid,
+    wrap: Option<MazeWrap>,
+    rng: &mut impl Rng,
+) -> (Grid, Vec<(Point, Direction)>) {
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
     let mut edges: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len() * 2);
     let mut region_map: Vec<u32> = (0..maze.tiles.len() as u32).collect();
@@ -737,14 +741,37 @@ fn create_maze_kruskal(mut maze: Grid, rng: &mut impl Rng) -> (Grid, Vec<(Point,
     // generate edges
     for y in 0..maze.height as i16 {
         for x in 0..maze.width as i16 {
-            if maze.get_tile(Point::new(x, y)).status == ConnectionStatus::Removed {
+            let pos = Point::new(x, y);
+            if maze.get_tile(pos).status == ConnectionStatus::Removed {
                 continue;
             }
-            if x > 0 && maze.get_tile(Point::new(x - 1, y)).status != ConnectionStatus::Removed {
-                edges.push((Point::new(x, y), Direction::West));
+
+            if wrap == Some(MazeWrap::Full) || wrap == Some(MazeWrap::Horizontal) {
+                if maze
+                    .get_tile(pos.travel_wrapped(Direction::West, maze.width, maze.height))
+                    .status
+                    != ConnectionStatus::Removed
+                {
+                    edges.push((pos, Direction::West));
+                }
+            } else if x > 0
+                && maze.get_tile(pos.travel(Direction::West)).status != ConnectionStatus::Removed
+            {
+                edges.push((pos, Direction::West));
             }
-            if y > 0 && maze.get_tile(Point::new(x, y - 1)).status != ConnectionStatus::Removed {
-                edges.push((Point::new(x, y), Direction::North));
+
+            if wrap == Some(MazeWrap::Full) || wrap == Some(MazeWrap::Vertical) {
+                if maze
+                    .get_tile(pos.travel_wrapped(Direction::North, maze.width, maze.height))
+                    .status
+                    != ConnectionStatus::Removed
+                {
+                    edges.push((pos, Direction::North));
+                }
+            } else if y > 0
+                && maze.get_tile(pos.travel(Direction::North)).status != ConnectionStatus::Removed
+            {
+                edges.push((pos, Direction::North));
             }
         }
     }
@@ -752,24 +779,30 @@ fn create_maze_kruskal(mut maze: Grid, rng: &mut impl Rng) -> (Grid, Vec<(Point,
 
     // generate maze
     for edge in edges {
+        let node1 = edge.0;
+        let node2 = if wrap.is_some() {
+            edge.0.travel_wrapped(edge.1, maze.width, maze.height)
+        } else {
+            edge.0.travel(edge.1)
+        };
+
         // if edge connects 2 different regions
         if merge_sets(
             &mut region_map,
-            maze.get_index(edge.0),
-            maze.get_index(edge.0.travel(edge.1)),
+            maze.get_index(node1),
+            maze.get_index(node2),
         ) {
-            if maze.get_tile(edge.0).status != ConnectionStatus::InMaze {
-                maze.get_tile_mut(edge.0).status = ConnectionStatus::InMaze;
+            if maze.get_tile(node1).status != ConnectionStatus::InMaze {
+                maze.get_tile_mut(node1).status = ConnectionStatus::InMaze;
             }
             history.push(edge);
-            maze.get_tile_mut(edge.0).connect(edge.1);
+            maze.get_tile_mut(node1).connect(edge.1);
 
-            if maze.get_tile(edge.0.travel(edge.1)).status != ConnectionStatus::InMaze {
-                maze.get_tile_mut(edge.0.travel(edge.1)).status = ConnectionStatus::InMaze;
-                history.push((edge.0.travel(edge.1), Direction::NoDir));
+            if maze.get_tile(node2).status != ConnectionStatus::InMaze {
+                maze.get_tile_mut(node2).status = ConnectionStatus::InMaze;
+                history.push((node2, Direction::NoDir));
             }
-            maze.get_tile_mut(edge.0.travel(edge.1))
-                .connect(edge.1.opposite());
+            maze.get_tile_mut(node2).connect(edge.1.opposite());
         }
     }
 
