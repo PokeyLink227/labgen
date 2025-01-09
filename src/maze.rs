@@ -1,4 +1,4 @@
-use rand::{seq::SliceRandom, seq::IteratorRandom, Rng};
+use rand::{seq::IteratorRandom, seq::SliceRandom, Rng};
 use std::{
     array,
     ops::{Add, AddAssign},
@@ -350,10 +350,13 @@ pub fn generate_maze(
                     num_unvisited += 1;
                 }
             }
-
         }
         _ => {
-            num_unvisited = maze.tiles.iter().filter(|&x| x.status == ConnectionStatus::UnVisited).count();
+            num_unvisited = maze
+                .tiles
+                .iter()
+                .filter(|&x| x.status == ConnectionStatus::UnVisited)
+                .count();
             start_pos = Point::new(0, 0);
         }
     };
@@ -371,7 +374,9 @@ pub fn generate_maze(
         MazeType::BinaryTree => create_maze_binary(maze, rng),
         MazeType::Sidewinder => create_maze_sidewinder(maze, rng),
         MazeType::Noise => create_maze_noise(maze, rng),
-        MazeType::GrowingTree => create_maze_growingtree(maze, start_pos, wrap, GrowingTreeBias::Newest, rng),
+        MazeType::GrowingTree => {
+            create_maze_growingtree(maze, start_pos, wrap, GrowingTreeBias::Newest, rng)
+        }
         MazeType::Wilson => create_maze_wilson(maze, start_pos, wrap, rng),
         MazeType::Kruskal => create_maze_kruskal(maze, rng),
     }
@@ -491,8 +496,10 @@ fn create_maze_binary(mut maze: Grid, rng: &mut impl Rng) -> (Grid, Vec<(Point, 
                 continue;
             }
 
-            let north_open: bool = y > 0 && maze.get_tile(Point::new(x, y - 1)).status != ConnectionStatus::Removed;
-            let west_open: bool = x > 0 && maze.get_tile(Point::new(x - 1, y)).status != ConnectionStatus::Removed;
+            let north_open: bool =
+                y > 0 && maze.get_tile(Point::new(x, y - 1)).status != ConnectionStatus::Removed;
+            let west_open: bool =
+                x > 0 && maze.get_tile(Point::new(x - 1, y)).status != ConnectionStatus::Removed;
 
             let dir: u8 = if west_open && north_open {
                 rng.gen_range(0..=1)
@@ -685,7 +692,9 @@ fn create_maze_wilson(
             };
             let next = adj
                 .enumerate()
-                .filter(|&(_, x)| maze.contains(x) && maze.get_tile(x).status != ConnectionStatus::Removed)
+                .filter(|&(_, x)| {
+                    maze.contains(x) && maze.get_tile(x).status != ConnectionStatus::Removed
+                })
                 .collect::<Vec<(usize, Point)>>()
                 .choose(rng)
                 .copied()
