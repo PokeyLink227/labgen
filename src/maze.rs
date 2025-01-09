@@ -487,11 +487,18 @@ fn create_maze_binary(mut maze: Grid, rng: &mut impl Rng) -> (Grid, Vec<(Point, 
 
     for y in 0..maze.height as i16 {
         for x in 0..maze.width as i16 {
-            let dir: u8 = if x > 0 && y > 0 {
+            if maze.get_tile(Point::new(x, y)).status != ConnectionStatus::UnVisited {
+                continue;
+            }
+
+            let north_open: bool = y > 0 && maze.get_tile(Point::new(x, y - 1)).status != ConnectionStatus::Removed;
+            let west_open: bool = x > 0 && maze.get_tile(Point::new(x - 1, y)).status != ConnectionStatus::Removed;
+
+            let dir: u8 = if west_open && north_open {
                 rng.gen_range(0..=1)
-            } else if x > 0 {
+            } else if west_open {
                 0
-            } else if y > 0 {
+            } else if north_open {
                 1
             } else {
                 2

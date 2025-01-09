@@ -18,7 +18,7 @@ so always swap algo on return and additionally keep track of total nodes visited
 |------------|----------|------------|-------|
 | backtrack | ✅ | ✅  | ❌ |
 | prim | ✅ | ✅ | ❌ |
-| binary-tree | ❌ | ❌ | ❌|
+| binary-tree | ❌ | ✅ | ❌|
 | sidewinder | ❌ | ❌ | ❌ |
 | noise | ❌ | ❌ | ❌ |
 | growing-tree | ✅ | ✅ | ❌ |
