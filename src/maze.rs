@@ -728,21 +728,18 @@ fn create_maze_kruskal(mut maze: Grid, rng: &mut impl Rng) -> (Grid, Vec<(Point,
     // generate edges
     for y in 0..maze.height as i16 {
         for x in 0..maze.width as i16 {
-            if x > 0 {
+            if maze.get_tile(Point::new(x, y)).status == ConnectionStatus::Removed {
+                continue;
+            }
+            if x > 0 && maze.get_tile(Point::new(x - 1, y)).status != ConnectionStatus::Removed {
                 edges.push((Point::new(x, y), Direction::West));
             }
-            if y > 0 {
+            if y > 0 && maze.get_tile(Point::new(x, y - 1)).status != ConnectionStatus::Removed {
                 edges.push((Point::new(x, y), Direction::North));
             }
         }
     }
-    // shuffle edges
-    for i in 0..edges.len() {
-        let index = rng.gen_range(i..edges.len());
-        let temp = edges[i];
-        edges[i] = edges[index];
-        edges[index] = temp;
-    }
+    edges.shuffle(rng);
 
     // generate maze
     for edge in edges {

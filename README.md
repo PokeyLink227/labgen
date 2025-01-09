@@ -23,4 +23,4 @@ so always swap algo on return and additionally keep track of total nodes visited
 | noise | ❌ | ❌ | ❌ |
 | growing-tree | ✅ | ✅ | ❌ |
 | wilsons | ✅ | ✅ | ❌ |
-| kruskal | ❌ | ❌ | ❌ |
+| kruskal | ❌ | ✅ | ❌ |
