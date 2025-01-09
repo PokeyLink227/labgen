@@ -84,9 +84,10 @@ fn main() {
     let mut rng: StdRng = StdRng::seed_from_u64(seed);
 
     let exclude = vec![
-        Rect::new(2, 2, 4, 1),
-        Rect::new(2, 4, 4, 1),
-        Rect::new(6, 2, 1, 3),
+        Rect::new(1, 1, 13, 1),
+        Rect::new(1, 13, 13, 1),
+        Rect::new(1, 1, 1, 13),
+        Rect::new(13, 1, 1, 12),
         //Rect::new(0, 0, 15, 15),
     ];
 

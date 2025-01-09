@@ -11,3 +11,7 @@
 | growing-tree | ✅ | ✅ | ❌ |
 | wilsons | ✅ | ✅ | ❌ |
 | kruskal | ✅ | ✅ | ❌ |
+
+### Warnings
+
+- wilson algorithm will run forever if some nodes are inaccessible 
