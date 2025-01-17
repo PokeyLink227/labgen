@@ -329,9 +329,50 @@ pub fn generate_maze(
         }
     }
 
+    // add rooms to the maze
+
+    // seperate maze into regions
+    let mut num_unvisited = 0;
+    let mut region_map: Vec<u32> = (0..maze.tiles.len() as u32).collect();
+    for y in 0..height as i16 {
+        for x in 0..width as i16 {
+            if maze.get_tile(Point::new(x, y)).status != ConnectionStatus::UnVisited {
+                continue;
+            }
+
+            num_unvisited += 1;
+
+            if x > 0 && maze.get_tile(Point::new(x - 1, y)).status == ConnectionStatus::UnVisited {
+                merge_sets(
+                    &mut region_map,
+                    maze.get_index(Point::new(x, y)),
+                    maze.get_index(Point::new(x - 1, y)),
+                );
+            }
+
+            if y > 0 && maze.get_tile(Point::new(x, y - 1)).status == ConnectionStatus::UnVisited {
+                merge_sets(
+                    &mut region_map,
+                    maze.get_index(Point::new(x, y)),
+                    maze.get_index(Point::new(x, y - 1)),
+                );
+            }
+        }
+    }
+
+    let mut asd = region_map
+        .into_iter()
+        .enumerate()
+        .filter(|&(i, _)| maze.tiles[i].status == ConnectionStatus::UnVisited)
+        .collect::<Vec<(usize, u32)>>();
+    asd.sort_by(|(_, a), (_, b)| a.cmp(b));
+
+    //println!("{:?}", region_map);
+    println!("{:?}", asd);
+
+
     // pick valid starting point for algos that need one
     let mut start_pos = Point::new(0, 0);
-    let mut num_unvisited = 0;
     match mtype {
         MazeType::Wilson | MazeType::Backtrack | MazeType::GrowingTree | MazeType::Prim => {
             let mut reservoir: Vec<Point> = Vec::with_capacity(maze.tiles.len());
@@ -347,16 +388,10 @@ pub fn generate_maze(
             for pos in reservoir {
                 if maze.get_tile(pos).status == ConnectionStatus::UnVisited {
                     start_pos = pos;
-                    num_unvisited += 1;
                 }
             }
         }
         _ => {
-            num_unvisited = maze
-                .tiles
-                .iter()
-                .filter(|&x| x.status == ConnectionStatus::UnVisited)
-                .count();
             start_pos = Point::new(0, 0);
         }
     };
@@ -659,6 +694,12 @@ fn create_maze_wilson(
 ) -> (Grid, Vec<(Point, Direction)>) {
     let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
     let mut reservoir: Vec<Point> = Vec::with_capacity(maze.tiles.len());
+
+    // need to generate reservoir in generate_maze then pass each disconnected set of cells to this function
+    // can do this by
+    // 1 flood fill to find each region ( do this until all cells have been visited ) ( each time you flood fill pick a new region )
+    // 2 sort by region and pass a slice to this function
+    // note: this needs to be done in order to fully fill the maze with some other methods as well
 
     // generate reservoir
     for y in 0..maze.height as i16 {
