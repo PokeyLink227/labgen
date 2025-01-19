@@ -454,6 +454,7 @@ pub fn generate_maze(
                             connections: Direction::NoDir as u8,
                         },
                     );
+                    history.push((region[0], Direction::NoDir));
                 } else {
                     create_maze_wilson(&mut maze, region, wrap, &mut history, rng);
                 }
