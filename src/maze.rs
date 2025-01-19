@@ -330,6 +330,13 @@ pub fn generate_maze(
     }
 
     // add rooms to the maze
+    maze.set_tile(
+        Point::new(2, 4),
+        Tile {
+            status: ConnectionStatus::InMaze,
+            connections: Direction::NoDir as u8,
+        },
+    );
 
     // seperate maze into regions
     let mut num_unvisited = 0;
@@ -448,7 +455,6 @@ pub fn generate_maze(
                         },
                     );
                 } else {
-                    println!("{}", region.len());
                     create_maze_wilson(&mut maze, region, wrap, &mut history, rng);
                 }
             }
@@ -467,6 +473,7 @@ pub fn generate_maze(
                             connections: Direction::NoDir as u8,
                         },
                     );
+                    history.push((region[0], Direction::NoDir));
                 }
             }
             create_maze_kruskal(&mut maze, wrap, &mut history, rng);
@@ -742,6 +749,8 @@ fn create_maze_wilson(
     history: &mut Vec<(Point, Direction)>,
     rng: &mut impl Rng,
 ) {
+    assert!(reservoir.len() > 1, "Cell reservoir too small");
+
     let mut reservoir_index = 0;
     let mut anchor: Point = reservoir[reservoir_index];
 
@@ -774,7 +783,7 @@ fn create_maze_wilson(
                 .collect::<Vec<(usize, Point)>>()
                 .choose(rng)
                 .copied()
-                .unwrap(); // safe to unwrap because a cell will always have at least 1 adjacent cell in the maze
+                .unwrap(); // safe to unwrap because a cell will always have at least 1 adjacent cell in the maze (as long as there is more than 1 cell in the region)
 
             let dir = Direction::from_clock(next.0 as u8);
             maze.get_tile_mut(pos).set_connected(dir);
