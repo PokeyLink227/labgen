@@ -401,7 +401,7 @@ pub fn generate_maze(
     region_slices.push(&open_tiles[start_index..region_map.len()]);
 
     // generate maze
-    let mut history = Vec::new();
+    let mut history = Vec::with_capacity(maze.tiles.len());
     match mtype {
         MazeType::Backtrack => {
             for region in region_slices {
@@ -449,13 +449,7 @@ pub fn generate_maze(
                     );
                 } else {
                     println!("{}", region.len());
-                    create_maze_wilson(
-                        &mut maze,
-                        region,
-                        wrap,
-                        &mut history,
-                        rng,
-                    );
+                    create_maze_wilson(&mut maze, region, wrap, &mut history, rng);
                 }
             }
         }
@@ -491,7 +485,6 @@ fn create_maze_backtrack(
 ) {
     let mut stack: Vec<Point> = Vec::new();
     let mut pos = start_pos;
-    *history = Vec::with_capacity(maze.tiles.len());
 
     maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
     stack.push(pos);
@@ -540,7 +533,6 @@ fn create_maze_prim(
     rng: &mut impl Rng,
 ) {
     let mut open_tiles: Vec<Point> = Vec::new();
-    *history = Vec::with_capacity(maze.tiles.len());
     let mut pos = start_pos;
 
     maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
@@ -586,8 +578,6 @@ fn create_maze_prim(
 fn create_maze_binary(maze: &mut Grid, history: &mut Vec<(Point, Direction)>, rng: &mut impl Rng) {
     use crate::maze::Direction::*;
 
-    *history = Vec::with_capacity(maze.tiles.len());
-
     for y in 0..maze.height as i16 {
         for x in 0..maze.width as i16 {
             if maze.get_tile(Point::new(x, y)).status != ConnectionStatus::UnVisited {
@@ -632,8 +622,6 @@ fn create_maze_sidewinder(
     rng: &mut impl Rng,
 ) {
     use crate::maze::Direction::*;
-
-    *history = Vec::with_capacity(maze.tiles.len() * 3 / 2);
 
     maze.get_tile_mut(Point { x: 0, y: 0 }).connect(East);
     maze.get_tile_mut(Point::new(0, 0)).status = ConnectionStatus::InMaze;
@@ -699,7 +687,6 @@ fn create_maze_growingtree(
     history: &mut Vec<(Point, Direction)>,
     rng: &mut impl Rng,
 ) {
-    *history = Vec::with_capacity(maze.tiles.len());
     let mut open: Vec<Point> = Vec::new();
 
     maze.get_tile_mut(start_pos).status = ConnectionStatus::InMaze;
@@ -755,7 +742,6 @@ fn create_maze_wilson(
     history: &mut Vec<(Point, Direction)>,
     rng: &mut impl Rng,
 ) {
-    *history = Vec::with_capacity(maze.tiles.len());
     let mut reservoir_index = 0;
     let mut anchor: Point = reservoir[reservoir_index];
 
@@ -823,7 +809,6 @@ fn create_maze_kruskal(
     history: &mut Vec<(Point, Direction)>,
     rng: &mut impl Rng,
 ) {
-    *history = Vec::with_capacity(maze.tiles.len());
     let mut edges: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len() * 2);
     let mut region_map: Vec<u32> = (0..maze.tiles.len() as u32).collect();
 
