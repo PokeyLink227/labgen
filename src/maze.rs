@@ -270,17 +270,17 @@ impl Grid {
     }
 
     pub fn get_tile(&self, pos: Point) -> Tile {
-        assert!(self.contains(pos));
+        assert!(self.contains(pos), "{:?} out of bounds", pos);
         self.tiles[pos.x as usize + pos.y as usize * self.width as usize]
     }
 
     pub fn get_tile_mut(&mut self, pos: Point) -> &mut Tile {
-        assert!(self.contains(pos));
+        assert!(self.contains(pos), "{:?} out of bounds", pos);
         &mut self.tiles[pos.x as usize + pos.y as usize * self.width as usize]
     }
 
     pub fn set_tile(&mut self, pos: Point, new: Tile) {
-        assert!(self.contains(pos));
+        assert!(self.contains(pos), "{:?} out of bounds", pos);
         self.tiles[pos.x as usize + pos.y as usize * self.width as usize] = new;
     }
 }
@@ -360,72 +360,138 @@ pub fn generate_maze(
         }
     }
 
-    let mut asd = region_map
-        .into_iter()
-        .enumerate()
-        .filter(|&(i, _)| maze.tiles[i].status == ConnectionStatus::UnVisited)
-        .collect::<Vec<(usize, u32)>>();
-    asd.sort_by(|(_, a), (_, b)| a.cmp(b));
-
-    //println!("{:?}", region_map);
-    println!("{:?}", asd);
-
-
-    // pick valid starting point for algos that need one
-    let mut start_pos = Point::new(0, 0);
-    match mtype {
-        MazeType::Wilson | MazeType::Backtrack | MazeType::GrowingTree | MazeType::Prim => {
-            let mut reservoir: Vec<Point> = Vec::with_capacity(maze.tiles.len());
-
-            // generate reservoir
-            for y in 0..maze.height as i16 {
-                for x in 0..maze.width as i16 {
-                    reservoir.push(Point::new(x, y));
-                }
-            }
-            reservoir.shuffle(rng);
-
-            for pos in reservoir {
-                if maze.get_tile(pos).status == ConnectionStatus::UnVisited {
-                    start_pos = pos;
-                }
-            }
-        }
-        _ => {
-            start_pos = Point::new(0, 0);
-        }
-    };
-
     // early return to ensure maze algos always recieve a maze with at least
     // 1 unvisited cell
     if num_unvisited < 1 {
         return (maze, Vec::new());
     }
 
-    // generate maze
+    // holds a list of index-region tuples of unvisited cells
+    let mut region_map = region_map
+        .into_iter()
+        .enumerate()
+        .filter(|&(i, _)| maze.tiles[i].status == ConnectionStatus::UnVisited)
+        .collect::<Vec<(usize, u32)>>();
+
+    // shuffle the region map for algos that need a shuffled reservoir
     match mtype {
-        MazeType::Backtrack => create_maze_backtrack(maze, start_pos, wrap, rng),
-        MazeType::Prim => create_maze_prim(maze, start_pos, wrap, rng),
-        MazeType::BinaryTree => create_maze_binary(maze, rng),
-        MazeType::Sidewinder => create_maze_sidewinder(maze, rng),
-        MazeType::Noise => create_maze_noise(maze, rng),
-        MazeType::GrowingTree => {
-            create_maze_growingtree(maze, start_pos, wrap, GrowingTreeBias::Newest, rng)
+        MazeType::Wilson => {
+            region_map.shuffle(rng);
         }
-        MazeType::Wilson => create_maze_wilson(maze, start_pos, wrap, rng),
-        MazeType::Kruskal => create_maze_kruskal(maze, wrap, rng),
+        _ => {}
     }
+    region_map.sort_by(|(_, a), (_, b)| a.cmp(b));
+
+    // holds a list of points in the maze in the same order as the region map
+    let open_tiles: Vec<Point> = region_map
+        .iter()
+        .map(|&(i, _)| Point::new((i as u16 % width) as i16, (i as u16 / width) as i16))
+        .collect();
+
+    let mut region_slices: Vec<&[Point]> = Vec::new();
+    let mut current_region = region_map[0].1;
+    let mut start_index = 0;
+    for (indx, &(i, r)) in region_map.iter().enumerate() {
+        if r != current_region {
+            region_slices.push(&open_tiles[start_index..indx]);
+            start_index = indx;
+            current_region = r;
+        }
+    }
+    region_slices.push(&open_tiles[start_index..region_map.len()]);
+
+    // generate maze
+    let mut history = Vec::new();
+    match mtype {
+        MazeType::Backtrack => {
+            for region in region_slices {
+                create_maze_backtrack(
+                    &mut maze,
+                    *region.choose(rng).unwrap(),
+                    wrap,
+                    &mut history,
+                    rng,
+                );
+            }
+        }
+        MazeType::Prim => {
+            for region in region_slices {
+                create_maze_prim(
+                    &mut maze,
+                    *region.choose(rng).unwrap(),
+                    wrap,
+                    &mut history,
+                    rng,
+                );
+            }
+        }
+        MazeType::GrowingTree => {
+            for region in region_slices {
+                create_maze_growingtree(
+                    &mut maze,
+                    *region.choose(rng).unwrap(),
+                    wrap,
+                    GrowingTreeBias::Newest,
+                    &mut history,
+                    rng,
+                );
+            }
+        }
+        MazeType::Wilson => {
+            for region in region_slices {
+                if region.len() == 1 {
+                    maze.set_tile(
+                        region[0],
+                        Tile {
+                            status: ConnectionStatus::InMaze,
+                            connections: Direction::NoDir as u8,
+                        },
+                    );
+                } else {
+                    println!("{}", region.len());
+                    create_maze_wilson(
+                        &mut maze,
+                        region,
+                        wrap,
+                        &mut history,
+                        rng,
+                    );
+                }
+            }
+        }
+        MazeType::BinaryTree => create_maze_binary(&mut maze, &mut history, rng),
+        MazeType::Sidewinder => create_maze_sidewinder(&mut maze, &mut history, rng),
+        MazeType::Noise => create_maze_noise(&mut maze, &mut history, rng),
+        MazeType::Kruskal => {
+            // kruskals only works on edges so it wont fill single tiles
+            for region in region_slices {
+                if region.len() == 1 {
+                    maze.set_tile(
+                        region[0],
+                        Tile {
+                            status: ConnectionStatus::InMaze,
+                            connections: Direction::NoDir as u8,
+                        },
+                    );
+                }
+            }
+            create_maze_kruskal(&mut maze, wrap, &mut history, rng);
+        }
+    }
+
+    (maze, history)
 }
 
 fn create_maze_backtrack(
-    mut maze: Grid,
+    maze: &mut Grid,
     start_pos: Point,
     wrap: Option<MazeWrap>,
+    history: &mut Vec<(Point, Direction)>,
     rng: &mut impl Rng,
-) -> (Grid, Vec<(Point, Direction)>) {
+) {
     let mut stack: Vec<Point> = Vec::new();
     let mut pos = start_pos;
-    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
+    *history = Vec::with_capacity(maze.tiles.len());
 
     maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
     stack.push(pos);
@@ -464,18 +530,17 @@ fn create_maze_backtrack(
             }
         }
     }
-
-    (maze, history)
 }
 
 fn create_maze_prim(
-    mut maze: Grid,
+    maze: &mut Grid,
     start_pos: Point,
     wrap: Option<MazeWrap>,
+    history: &mut Vec<(Point, Direction)>,
     rng: &mut impl Rng,
-) -> (Grid, Vec<(Point, Direction)>) {
+) {
     let mut open_tiles: Vec<Point> = Vec::new();
-    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
+    *history = Vec::with_capacity(maze.tiles.len());
     let mut pos = start_pos;
 
     maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
@@ -516,14 +581,12 @@ fn create_maze_prim(
             }
         }
     }
-
-    (maze, history)
 }
 
-fn create_maze_binary(mut maze: Grid, rng: &mut impl Rng) -> (Grid, Vec<(Point, Direction)>) {
+fn create_maze_binary(maze: &mut Grid, history: &mut Vec<(Point, Direction)>, rng: &mut impl Rng) {
     use crate::maze::Direction::*;
 
-    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
+    *history = Vec::with_capacity(maze.tiles.len());
 
     for y in 0..maze.height as i16 {
         for x in 0..maze.width as i16 {
@@ -561,14 +624,16 @@ fn create_maze_binary(mut maze: Grid, rng: &mut impl Rng) -> (Grid, Vec<(Point, 
             maze.get_tile_mut(Point::new(x, y)).status = ConnectionStatus::InMaze;
         }
     }
-
-    (maze, history)
 }
 
-fn create_maze_sidewinder(mut maze: Grid, rng: &mut impl Rng) -> (Grid, Vec<(Point, Direction)>) {
+fn create_maze_sidewinder(
+    maze: &mut Grid,
+    history: &mut Vec<(Point, Direction)>,
+    rng: &mut impl Rng,
+) {
     use crate::maze::Direction::*;
 
-    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len() * 3 / 2);
+    *history = Vec::with_capacity(maze.tiles.len() * 3 / 2);
 
     maze.get_tile_mut(Point { x: 0, y: 0 }).connect(East);
     maze.get_tile_mut(Point::new(0, 0)).status = ConnectionStatus::InMaze;
@@ -610,8 +675,6 @@ fn create_maze_sidewinder(mut maze: Grid, rng: &mut impl Rng) -> (Grid, Vec<(Poi
             }
         }
     }
-
-    (maze, history)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -629,13 +692,14 @@ impl Default for GrowingTreeBias {
 }
 
 fn create_maze_growingtree(
-    mut maze: Grid,
+    maze: &mut Grid,
     start_pos: Point,
     wrap: Option<MazeWrap>,
     bias: GrowingTreeBias,
+    history: &mut Vec<(Point, Direction)>,
     rng: &mut impl Rng,
-) -> (Grid, Vec<(Point, Direction)>) {
-    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
+) {
+    *history = Vec::with_capacity(maze.tiles.len());
     let mut open: Vec<Point> = Vec::new();
 
     maze.get_tile_mut(start_pos).status = ConnectionStatus::InMaze;
@@ -682,45 +746,30 @@ fn create_maze_growingtree(
             }
         }
     }
-
-    (maze, history)
 }
 
 fn create_maze_wilson(
-    mut maze: Grid,
-    start_pos: Point,
+    maze: &mut Grid,
+    reservoir: &[Point],
     wrap: Option<MazeWrap>,
+    history: &mut Vec<(Point, Direction)>,
     rng: &mut impl Rng,
-) -> (Grid, Vec<(Point, Direction)>) {
-    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
-    let mut reservoir: Vec<Point> = Vec::with_capacity(maze.tiles.len());
+) {
+    *history = Vec::with_capacity(maze.tiles.len());
+    let mut reservoir_index = 0;
+    let mut anchor: Point = reservoir[reservoir_index];
 
-    // need to generate reservoir in generate_maze then pass each disconnected set of cells to this function
-    // can do this by
-    // 1 flood fill to find each region ( do this until all cells have been visited ) ( each time you flood fill pick a new region )
-    // 2 sort by region and pass a slice to this function
-    // note: this needs to be done in order to fully fill the maze with some other methods as well
-
-    // generate reservoir
-    for y in 0..maze.height as i16 {
-        for x in 0..maze.width as i16 {
-            if start_pos != Point::new(x, y) {
-                reservoir.push(Point::new(x, y));
-            }
-        }
-    }
-    reservoir.shuffle(rng);
-
-    let mut anchor = start_pos;
     maze.get_tile_mut(anchor).status = ConnectionStatus::InMaze;
     history.push((anchor, Direction::NoDir));
 
-    'outer: while !reservoir.is_empty() {
+    'outer: loop {
         // pick a cell not already in the maze
         while maze.get_tile(anchor).status != ConnectionStatus::UnVisited {
-            anchor = match reservoir.pop() {
-                Some(v) => v,
-                None => break 'outer,
+            reservoir_index += 1;
+            if reservoir_index >= reservoir.len() {
+                break 'outer;
+            } else {
+                anchor = reservoir[reservoir_index];
             }
         }
         let mut pos = anchor;
@@ -765,17 +814,16 @@ fn create_maze_wilson(
         }
         maze.get_tile_mut(pos).connect(dir.opposite());
     }
-
-    (maze, history)
 }
 
 // merge_sets 60x faster than simple array and 600x faster with set_lookup_flatten
 fn create_maze_kruskal(
-    mut maze: Grid,
+    maze: &mut Grid,
     wrap: Option<MazeWrap>,
+    history: &mut Vec<(Point, Direction)>,
     rng: &mut impl Rng,
-) -> (Grid, Vec<(Point, Direction)>) {
-    let mut history: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len());
+) {
+    *history = Vec::with_capacity(maze.tiles.len());
     let mut edges: Vec<(Point, Direction)> = Vec::with_capacity(maze.tiles.len() * 2);
     let mut region_map: Vec<u32> = (0..maze.tiles.len() as u32).collect();
 
@@ -846,8 +894,6 @@ fn create_maze_kruskal(
             maze.get_tile_mut(node2).connect(edge.1.opposite());
         }
     }
-
-    (maze, history)
 }
 
 // 10x faster than normal lookup
@@ -1136,7 +1182,7 @@ fn flood_tile_backtrack(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point, rn
     }
 }
 
-fn create_maze_noise(mut maze: Grid, rng: &mut impl Rng) -> (Grid, Vec<(Point, Direction)>) {
+fn create_maze_noise(maze: &mut Grid, history: &mut Vec<(Point, Direction)>, rng: &mut impl Rng) {
     let noise_map: Vec<u8> = generate_noise(maze.width, maze.height, 7, 7, rng)
         .iter()
         .map(|x| if *x < 0.0 { 0 } else { 1 })
@@ -1144,14 +1190,12 @@ fn create_maze_noise(mut maze: Grid, rng: &mut impl Rng) -> (Grid, Vec<(Point, D
 
     for y in 0..maze.height as i16 {
         for x in 0..maze.width as i16 {
-            flood_tile_prim(&mut maze, &noise_map, Point { x, y }, rng);
-            flood_tile_backtrack(&mut maze, &noise_map, Point { x, y }, rng);
+            flood_tile_prim(maze, &noise_map, Point { x, y }, rng);
+            flood_tile_backtrack(maze, &noise_map, Point { x, y }, rng);
         }
     }
 
     /*
         need to add random stopping and then also implement connecting of maze regions
     */
-
-    (maze, Vec::new())
 }

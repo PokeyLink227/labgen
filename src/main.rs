@@ -82,13 +82,13 @@ fn main() {
 
     let seed: u64 = args.seed.unwrap_or(rand::random::<u64>());
     let mut rng: StdRng = StdRng::seed_from_u64(seed);
+    println!("seed: {}", seed);
 
     let exclude = vec![
-        Rect::new(1, 1, 3, 1),
-        Rect::new(1, 3, 3, 1),
-        Rect::new(1, 1, 1, 3),
-        Rect::new(3, 1, 1, 2),
-        //Rect::new(0, 0, 15, 15),
+        Rect::new(4, 0, 1, 15),
+        Rect::new(9, 0, 1, 15),
+        Rect::new(13, 0, 1, 15),
+        Rect::new(0, 1, 15, 1),
     ];
 
     let mut now = Instant::now();
@@ -127,7 +127,6 @@ fn main() {
     }
     let image_time = now.elapsed();
 
-    println!("seed: {}", seed);
     //println!("dbg: {:?}", nodes.tiles);
     println!(
         "Elapsed time: maze {}.{:09.9}s, gif {}.{:09.9}s",
