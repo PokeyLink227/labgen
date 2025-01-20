@@ -6,6 +6,7 @@ improve history possibly with an enum to support
     - temp cells in maze
     - uncarving cells
 3d mazes (would need gui to make effectively maybe bevy + egui?) (or egui + wgpu)
+wrapping rooms
 
 
 instead of flood fill
