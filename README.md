@@ -19,7 +19,7 @@
 |------------|----------|------------|-------|
 | backtrack    | ✅ | ✅ | ✅ |
 | prim         | ✅ | ✅ | ✅ |
-| binary-tree  | ❌ | ✅ | ❌ |
+| binary-tree  | ❌ | ✅ | ✅ |
 | sidewinder   | ❌ | ❌ | ❌ |
 | noise        | ❌ | ❌ | ❌ |
 | growing-tree | ✅ | ✅ | ✅ |
@@ -34,4 +34,4 @@
 
 ### Warnings
 
-- None (for now)
+- binary tree mazes with rooms or exclusions will develop isolated regions

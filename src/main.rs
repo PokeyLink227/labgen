@@ -85,18 +85,26 @@ fn main() {
     println!("seed: {}", seed);
 
     let exclude = vec![
-        Rect::new(0, 0, 6, 1),
-        Rect::new(9, 0, 6, 1),
-        Rect::new(0, 14, 6, 1),
-        Rect::new(9, 14, 6, 1),
-        Rect::new(0, 0, 1, 6),
-        Rect::new(0, 9, 1, 6),
-        Rect::new(14, 0, 1, 6),
-        Rect::new(14, 9, 1, 6),
+        Rect::new(4, 0, 1, 15),
+        Rect::new(9, 0, 1, 15),
+        Rect::new(13, 0, 1, 15),
+        Rect::new(0, 1, 15, 1),
+        //Rect::new(1, 0, 1, 5), // this breaks the region code
+
+        /*
+        Rect::new(1, 0, 1, 5),
+        Rect::new(2, 1, 1, 1),
+        */
     ];
 
     let rooms = vec![
-
+        Rect::new(1, 0, 1, 5), // this breaks the region code
+        Rect::new(3, 4, 8, 3),
+        Rect::new(6, 0, 1, 5),
+        Rect::new(8, 12, 5, 1),
+        /*
+        Rect::new(4, 1, 1, 1),
+        */
     ];
 
     let mut now = Instant::now();
