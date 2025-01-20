@@ -22,3 +22,6 @@
 - Rooms
   - connected areas of the maze that by default will not disrupt the perfect aspect of the maze
   - if doors are placed manually then this is no longer guaranteed
+- Regions
+  - areas of the maze that are filled with connected maze
+  - (WIP) can be overridden to form disconnected but adjacent parts of the maze without the use of exclusions
