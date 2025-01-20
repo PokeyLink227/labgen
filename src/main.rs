@@ -98,8 +98,8 @@ fn main() {
     ];
 
     let rooms = vec![
-        Rect::new(3, 4, 8, 3),
         Rect::new(1, 0, 1, 5), // this breaks the region code
+        Rect::new(3, 4, 8, 3),
         Rect::new(6, 0, 1, 5),
         Rect::new(8, 12, 5, 1),
         /*

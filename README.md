@@ -3,18 +3,19 @@
 
 |  Maze Type | Wrapping | Exclusions | Rooms |
 |------------|----------|------------|-------|
-| backtrack | ✅ | ✅  | ❌ |
-| prim | ✅ | ✅ | ❌ |
+| backtrack | ✅ | ✅  | ✅ |
+| prim | ✅ | ✅ | ✅ |
 | binary-tree | ❌ | ✅ | ❌|
 | sidewinder | ❌ | ❌ | ❌ |
 | noise | ❌ | ❌ | ❌ |
-| growing-tree | ✅ | ✅ | ❌ |
-| wilsons | ✅ | ✅ | ❌ |
-| kruskal | ✅ | ✅ | ❌ |
+| growing-tree | ✅ | ✅ | ✅ |
+| wilsons | ✅ | ✅ | ✅ |
+| kruskal | ✅ | ✅ | ✅ |
 
 ### Warnings
 
 - wilson algorithm will run forever if some nodes are inaccessible
+- mazes with wrapping and rooms will develop loops
 
 ## Feature descriptions
 - Exclusions

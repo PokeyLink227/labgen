@@ -211,6 +211,9 @@ impl Direction {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Edge(Point, Direction);
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Tile {
     pub status: ConnectionStatus,
@@ -401,38 +404,39 @@ pub fn generate_maze(
     }
 
     // holds a list of index-region tuples of unvisited cells
-    let mut region_map = region_map
-        .into_iter()
+    let mut sorted_region_map = region_map
+        .iter()
         .enumerate()
         .filter(|&(i, _)| maze.tiles[i].status == ConnectionStatus::UnVisited)
+        .map(|(i, &r)| (i, r))
         .collect::<Vec<(usize, u32)>>();
 
     // shuffle the region map for algos that need a shuffled reservoir
     match mtype {
         MazeType::Wilson => {
-            region_map.shuffle(rng);
+            sorted_region_map.shuffle(rng);
         }
         _ => {}
     }
-    region_map.sort_by(|(_, a), (_, b)| a.cmp(b));
+    sorted_region_map.sort_by(|(_, a), (_, b)| a.cmp(b));
 
     // holds a list of points in the maze in the same order as the region map
-    let open_tiles: Vec<Point> = region_map
+    let open_tiles: Vec<Point> = sorted_region_map
         .iter()
         .map(|&(i, _)| Point::new((i as u16 % width) as i16, (i as u16 / width) as i16))
         .collect();
 
     let mut region_slices: Vec<&[Point]> = Vec::new();
-    let mut current_region = region_map[0].1;
+    let mut current_region = sorted_region_map[0].1;
     let mut start_index = 0;
-    for (indx, &(_, r)) in region_map.iter().enumerate() {
+    for (indx, &(_, r)) in sorted_region_map.iter().enumerate() {
         if r != current_region {
             region_slices.push(&open_tiles[start_index..indx]);
             start_index = indx;
             current_region = r;
         }
     }
-    region_slices.push(&open_tiles[start_index..region_map.len()]);
+    region_slices.push(&open_tiles[start_index..sorted_region_map.len()]);
 
     // generate maze
     let mut history = Vec::with_capacity(maze.tiles.len());
@@ -509,11 +513,46 @@ pub fn generate_maze(
     }
 
     // add in doors to connect rooms to the rest of the maze
+
+    // list of edge-region tuples
+    let mut edges: Vec<Edge> = Vec::new();
     for room in rooms {
         // generate the list of edges out of the room
         // filter by the ones that connect 2 different regions
         // group the edges by which region they connect to
         // for each group of edges pick one and add it to the maze
+
+        for y in 0..room.h as i16 {
+            for x in 0..room.w as i16 {
+                let pos = Point::new(room.x + x, room.y + y);
+                pos.adjacent()
+                    .enumerate()
+                    .filter(|&(_, x)| {
+                        maze.contains(x) && maze.get_tile(x).status == ConnectionStatus::InMaze
+                    })
+                    .for_each(|(i, _)| {
+                        edges.push(Edge(pos, Direction::from_clock_cardinal(i as u8)));
+                    });
+            }
+        }
+    }
+
+    edges.shuffle(rng);
+    for e in edges {
+        let node1 = e.0;
+        let node2 = e.0.travel(e.1);
+
+        // if edge connects 2 different regions
+        if merge_sets(
+            &mut region_map,
+            maze.get_index(node1),
+            maze.get_index(node2),
+        ) {
+            // TODO: change history to use edges
+            history.push((e.0, e.1));
+            maze.get_tile_mut(node1).connect(e.1);
+            maze.get_tile_mut(node2).connect(e.1.opposite());
+        }
     }
 
     (maze, history)
