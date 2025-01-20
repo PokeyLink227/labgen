@@ -134,7 +134,7 @@ fn main() {
 
     if args.animate {
         if args.compress {
-            generate_gif(&nodes, &hist, &opts, &ani_opts);
+            generate_gif(&nodes, &hist, &rooms, &opts, &ani_opts);
         } else {
             generate_gif_uncompressed(&nodes, &hist, &opts, &ani_opts);
         }

@@ -1,4 +1,4 @@
-use crate::maze::{ConnectionStatus, Direction, Grid, Point};
+use crate::maze::{ConnectionStatus, Direction, Grid, Point, Rect};
 use gif::{DisposalMethod, Encoder, Frame, Repeat};
 use std::{borrow::Cow, fs::File, io::BufWriter};
 
@@ -76,7 +76,7 @@ pub fn generate_gif_uncompressed(
                 area_top = pt.y as u16 * cell_width + opts.wall_width;
                 area_left = pt.x as u16 * cell_width + 0;
             }
-            _ => todo!(),
+            _ => todo!("Diagonal travel is not supported yet"),
         }
 
         for y in area_top..(area_top + area_height) {
@@ -108,6 +108,7 @@ pub fn generate_gif_uncompressed(
 pub fn generate_gif(
     maze: &Grid,
     history: &[(Point, Direction)],
+    rooms: &[Rect],
     opts: &ImageOptions,
     ani_opts: &AnimationOptions,
 ) {
@@ -119,6 +120,7 @@ pub fn generate_gif(
     );
 
     let empty_maze: Vec<u8> = vec![0; width as usize * height as usize];
+    let full_maze: Vec<u8> = vec![1; width as usize * height as usize];
     let connected_cell: Vec<u8> = vec![1; (cell_width * cell_width) as usize];
 
     let mut image =
@@ -133,6 +135,20 @@ pub fn generate_gif(
     frame.delay = 0;
     frame.buffer = Cow::Borrowed(&empty_maze);
     encoder.write_frame(&frame).unwrap();
+
+    // add rooms to maze
+    for r in rooms {
+        let mut frame = Frame::default();
+        frame.delay = ani_opts.frame_time;
+        frame.width = cell_width * r.w as u16 - opts.wall_width;
+        frame.height = cell_width * r.h as u16 - opts.wall_width;
+        frame.top = r.y as u16 * cell_width + opts.wall_width;
+        frame.left = r.x as u16 * cell_width + opts.wall_width;
+
+        frame.buffer = Cow::Borrowed(&full_maze);
+        frame.dispose = DisposalMethod::Keep;
+        encoder.write_frame(&frame).unwrap();
+    }
 
     for (pt, dir) in history {
         let mut frame = Frame::default();
@@ -170,7 +186,7 @@ pub fn generate_gif(
                 frame.top = pt.y as u16 * cell_width + opts.wall_width;
                 frame.left = pt.x as u16 * cell_width + 0;
             }
-            _ => todo!(),
+            _ => todo!("Diagonal travel is not supported yet"),
         }
 
         frame.buffer = Cow::Borrowed(&connected_cell);

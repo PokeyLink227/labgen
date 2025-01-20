@@ -3,14 +3,20 @@
 
 |  Maze Type | Wrapping | Exclusions | Rooms |
 |------------|----------|------------|-------|
-| backtrack | ✅ | ✅  | ✅ |
-| prim | ✅ | ✅ | ✅ |
-| binary-tree | ❌ | ✅ | ❌|
-| sidewinder | ❌ | ❌ | ❌ |
-| noise | ❌ | ❌ | ❌ |
+| backtrack    | ✅ | ✅ | ✅ |
+| prim         | ✅ | ✅ | ✅ |
+| binary-tree  | ❌ | ✅ | ❌ |
+| sidewinder   | ❌ | ❌ | ❌ |
+| noise        | ❌ | ❌ | ❌ |
 | growing-tree | ✅ | ✅ | ✅ |
-| wilsons | ✅ | ✅ | ✅ |
-| kruskal | ✅ | ✅ | ✅ |
+| wilsons      | ✅ | ✅ | ✅ |
+| kruskal      | ✅ | ✅ | ✅ |
+
+|  Image Type | Animation | Batching | Wrapping | Exclusions | Rooms |
+|-------------|-----------|----------|----------|------------|-------|
+| png            | ❌ | ❌ | ✅ | ✅ | ✅ |
+| gif            | ✅ | ✅ | ✅ | ✅ | ❌ |
+| gif-compressed | ✅ | ❌ | ✅ | ✅ | ✅ |
 
 ### Warnings
 
