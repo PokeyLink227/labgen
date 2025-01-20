@@ -5,6 +5,7 @@ add ellers and growing forest - for sure second one
 improve history possibly with an enum to support
     - temp cells in maze
     - uncarving cells
+    - backtracking
 3d mazes (would need gui to make effectively maybe bevy + egui?) (or egui + wgpu)
 wrapping rooms
 
