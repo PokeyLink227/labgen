@@ -202,15 +202,6 @@ impl From<u8> for Direction {
 impl Direction {
     pub fn opposite(self) -> Self {
         ((((self as u8) << 4) | ((self as u8) >> 4)) & 0b11111111).into()
-        /*
-                match self {
-                    Direction::North => Direction::South,
-                    Direction::East => Direction::West,
-                    Direction::South => Direction::North,
-                    Direction::West => Direction::East,
-                    Direction::NoDir => Direction::NoDir,
-                }
-        */
     }
 
     // constructs a direction by starting at north and rotation clockwise
