@@ -14,7 +14,6 @@
 
 ### Warnings
 
-- wilson algorithm will run forever if some nodes are inaccessible
 - mazes with wrapping and rooms will develop loops
 
 ## Feature descriptions
