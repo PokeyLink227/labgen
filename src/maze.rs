@@ -194,19 +194,19 @@ pub enum MazeWrap {
 #[repr(u8)]
 pub enum Direction {
     NoDir = 0b0000,
-    North = 0b0001,
-    East = 0b0010,
-    South = 0b0100,
-    West = 0b1000,
+    North = 0b00000001,
+    East = 0b00000100,
+    South = 0b00010000,
+    West = 0b1000000,
 }
 
 impl From<u8> for Direction {
     fn from(src: u8) -> Direction {
         match src {
-            0b0001 => Direction::North,
-            0b0010 => Direction::East,
-            0b0100 => Direction::South,
-            0b1000 => Direction::West,
+            0b00000001 => Direction::North,
+            0b00000100 => Direction::East,
+            0b00010000 => Direction::South,
+            0b1000000 => Direction::West,
             _ => Direction::NoDir,
         }
     }
@@ -214,7 +214,7 @@ impl From<u8> for Direction {
 
 impl Direction {
     pub fn opposite(self) -> Self {
-        ((((self as u8) << 2) | ((self as u8) >> 2)) & 0b1111).into()
+        ((((self as u8) << 4) | ((self as u8) >> 4)) & 0b11111111).into()
         /*
                 match self {
                     Direction::North => Direction::South,
@@ -228,8 +228,8 @@ impl Direction {
 
     // constructs a direction by starting at north and rotation clockwise
     // until a desired direction is reached
-    pub fn from_clock(rot: u8) -> Self {
-        (0b00000001 << rot).into()
+    pub fn from_clock_cardinal(rot: u8) -> Self {
+        (0b00000001 << (rot * 2)).into()
     }
 }
 
@@ -519,7 +519,7 @@ fn create_maze_backtrack(
                 stack.pop();
             }
             Some(next) => {
-                let dir = Direction::from_clock(next.0 as u8);
+                let dir = Direction::from_clock_cardinal(next.0 as u8);
                 maze.get_tile_mut(pos).connect(dir);
 
                 pos = next.1;
@@ -569,7 +569,7 @@ fn create_maze_prim(
                 open_tiles.swap_remove(current_tile_index);
             }
             Some(next) => {
-                let dir = Direction::from_clock(next.0 as u8);
+                let dir = Direction::from_clock_cardinal(next.0 as u8);
                 maze.get_tile_mut(pos).connect(dir);
 
                 pos = next.1;
@@ -729,7 +729,7 @@ fn create_maze_growingtree(
                 open.remove(selected_index);
             }
             Some(next) => {
-                let dir = Direction::from_clock(next.0 as u8);
+                let dir = Direction::from_clock_cardinal(next.0 as u8);
                 maze.get_tile_mut(selected).connect(dir);
 
                 let selected = next.1;
@@ -786,7 +786,7 @@ fn create_maze_wilson(
                 .copied()
                 .unwrap(); // safe to unwrap because a cell will always have at least 1 adjacent cell in the maze (as long as there is more than 1 cell in the region)
 
-            let dir = Direction::from_clock(next.0 as u8);
+            let dir = Direction::from_clock_cardinal(next.0 as u8);
             maze.get_tile_mut(pos).set_connected(dir);
             pos = next.1;
         }
@@ -1113,7 +1113,7 @@ fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point, rng: &m
                 open_tiles.swap_remove(current_tile_index);
             }
             Some(next) => {
-                let dir = Direction::from_clock(next.0 as u8);
+                let dir = Direction::from_clock_cardinal(next.0 as u8);
                 maze.get_tile_mut(pos).connect(dir);
 
                 pos = next.1;
@@ -1164,7 +1164,7 @@ fn flood_tile_backtrack(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point, rn
                 pos = tile_stack.pop().unwrap();
             }
             Some(next) => {
-                let dir = Direction::from_clock(next.0 as u8);
+                let dir = Direction::from_clock_cardinal(next.0 as u8);
                 maze.get_tile_mut(pos).connect(dir);
 
                 pos = next.1;
@@ -1193,4 +1193,40 @@ fn create_maze_noise(maze: &mut Grid, history: &mut Vec<(Point, Direction)>, rng
     /*
         need to add random stopping and then also implement connecting of maze regions
     */
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn opposite() {
+        let result_north = Direction::North.opposite();
+        assert_eq!(result_north, Direction::South);
+
+        let result_east = Direction::East.opposite();
+        assert_eq!(result_east, Direction::West);
+
+        let result_south = Direction::South.opposite();
+        assert_eq!(result_south, Direction::North);
+
+        let result_west = Direction::West.opposite();
+        assert_eq!(result_west, Direction::East);
+    }
+
+    #[test]
+    fn clock() {
+        let result_north = Direction::from_clock_cardinal(0);
+        assert_eq!(result_north, Direction::North);
+
+        let result_east = Direction::from_clock_cardinal(1);
+        assert_eq!(result_east, Direction::East);
+
+        let result_south = Direction::from_clock_cardinal(2);
+        assert_eq!(result_south, Direction::South);
+
+        let result_west = Direction::from_clock_cardinal(3);
+        assert_eq!(result_west, Direction::West);
+    }
 }
