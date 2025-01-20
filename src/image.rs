@@ -76,6 +76,7 @@ pub fn generate_gif_uncompressed(
                 area_top = pt.y as u16 * cell_width + opts.wall_width;
                 area_left = pt.x as u16 * cell_width + 0;
             }
+            _ => todo!(),
         }
 
         for y in area_top..(area_top + area_height) {
@@ -169,6 +170,7 @@ pub fn generate_gif(
                 frame.top = pt.y as u16 * cell_width + opts.wall_width;
                 frame.left = pt.x as u16 * cell_width + 0;
             }
+            _ => todo!(),
         }
 
         frame.buffer = Cow::Borrowed(&connected_cell);
@@ -245,6 +247,14 @@ pub fn generate_png(maze: &Grid, opts: &ImageOptions) {
                     }
                 }
             }
+            if connections & Direction::SouthEast as u8 != 0 {
+                for y in opts.passage_width..cell_width {
+                    for x in opts.passage_width..cell_width {
+                        pixels[(x + left) as usize + ((y + top) as usize * width as usize)] = 1;
+                    }
+                }
+            }
+
             // only needed for wrapping mazes
             // only chekc on edges to reduce overdraw
             if px == 0 {

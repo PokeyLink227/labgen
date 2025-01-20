@@ -1,4 +1,4 @@
-use rand::{seq::IteratorRandom, seq::SliceRandom, Rng};
+use rand::{seq::SliceRandom, Rng};
 use std::{
     array,
     ops::{Add, AddAssign},
@@ -75,53 +75,32 @@ impl Point {
         match dir {
             Direction::NoDir => self,
             Direction::North => self + Point { x: 0, y: -1 },
+            Direction::NorthEast => self + Point { x: 1, y: -1 },
             Direction::East => self + Point { x: 1, y: 0 },
+            Direction::SouthEast => self + Point { x: 1, y: 1 },
             Direction::South => self + Point { x: 0, y: 1 },
+            Direction::SouthWest => self + Point { x: -1, y: 1 },
             Direction::West => self + Point { x: -1, y: 0 },
+            Direction::NorthWest => self + Point { x: -1, y: -1 },
         }
     }
 
     pub fn travel_wrapped(self, dir: Direction, width: u16, height: u16) -> Self {
-        match dir {
-            Direction::NoDir => self,
-            Direction::North => {
-                if self.y - 1 < 0 {
-                    Point::new(self.x, height as i16 - 1)
-                } else {
-                    self + Point { x: 0, y: -1 }
-                }
-            }
-            Direction::East => {
-                if self.x + 1 >= width as i16 {
-                    Point { x: 0, y: self.y }
-                } else {
-                    self + Point { x: 1, y: 0 }
-                }
-            }
-            Direction::South => {
-                if self.y + 1 >= height as i16 {
-                    Point { x: self.x, y: 0 }
-                } else {
-                    self + Point { x: 0, y: 1 }
-                }
-            }
-            Direction::West => {
-                if self.x - 1 < 0 {
-                    Point::new(width as i16 - 1, self.y)
-                } else {
-                    self + Point { x: -1, y: 0 }
-                }
-            }
+        let mut new_pos = self.travel(dir);
+        if new_pos.x < 0 {
+            new_pos.x = width as i16 - 1;
         }
-        /*
-                match dir {
-                    Direction::NoDir => self,
-                    Direction::North => self + Point { x: 0, y: -1 },
-                    Direction::East => self + Point { x: 1, y: 0 },
-                    Direction::South => self + Point { x: 0, y: 1 },
-                    Direction::West => self + Point { x: -1, y: 0 },
-                }
-        */
+        if new_pos.y < 0 {
+            new_pos.y = height as i16 - 1;
+        }
+        if new_pos.x >= width as i16 {
+            new_pos.x = 0;
+        }
+        if new_pos.y >= height as i16 {
+            new_pos.y = 0;
+        }
+
+        new_pos
     }
 
     pub fn new(x: i16, y: i16) -> Self {
@@ -162,7 +141,7 @@ impl Vector2<f32> {
 pub enum ConnectionStatus {
     #[default]
     UnVisited,
-    Visited,
+    //Visited,
     InMaze,
     Removed,
 }
@@ -195,18 +174,26 @@ pub enum MazeWrap {
 pub enum Direction {
     NoDir = 0b0000,
     North = 0b00000001,
+    NorthEast = 0b00000010,
     East = 0b00000100,
+    SouthEast = 0b00001000,
     South = 0b00010000,
-    West = 0b1000000,
+    SouthWest = 0b00100000,
+    West = 0b01000000,
+    NorthWest = 0b010000000,
 }
 
 impl From<u8> for Direction {
     fn from(src: u8) -> Direction {
         match src {
             0b00000001 => Direction::North,
+            0b00000010 => Direction::NorthEast,
             0b00000100 => Direction::East,
+            0b00001000 => Direction::SouthEast,
             0b00010000 => Direction::South,
-            0b1000000 => Direction::West,
+            0b00100000 => Direction::SouthWest,
+            0b01000000 => Direction::West,
+            0b10000000 => Direction::NorthWest,
             _ => Direction::NoDir,
         }
     }
@@ -330,13 +317,40 @@ pub fn generate_maze(
     }
 
     // add rooms to the maze
-    maze.set_tile(
-        Point::new(2, 4),
-        Tile {
-            status: ConnectionStatus::InMaze,
-            connections: Direction::NoDir as u8,
-        },
-    );
+    let fully_connected: u8 = 0b11111111;
+    for r in rooms {
+        for y in 0..r.h {
+            for x in 0..r.w {
+                let mut connections = fully_connected;
+
+                if y == 0 {
+                    connections &= !(Direction::NorthWest as u8
+                        | Direction::North as u8
+                        | Direction::NorthEast as u8);
+                }
+                // might overflow
+                if y == r.h - 1 {
+                    connections &= !(Direction::SouthWest as u8
+                        | Direction::South as u8
+                        | Direction::SouthEast as u8);
+                }
+                if x == 0 {
+                    connections &= !(Direction::NorthWest as u8
+                        | Direction::West as u8
+                        | Direction::SouthWest as u8);
+                }
+                // might overflow
+                if x == r.w - 1 {
+                    connections &= !(Direction::NorthEast as u8
+                        | Direction::East as u8
+                        | Direction::SouthEast as u8);
+                }
+
+                maze.get_tile_mut(Point::new(x + r.x, y + r.y)).status = ConnectionStatus::InMaze;
+                maze.get_tile_mut(Point::new(x + r.x, y + r.y)).connections |= connections;
+            }
+        }
+    }
 
     // seperate maze into regions
     let mut num_unvisited = 0;
@@ -365,6 +379,11 @@ pub fn generate_maze(
                 );
             }
         }
+    }
+
+    // ensure all regions are equal to their parent for easy comparisons
+    for i in 0..region_map.len() {
+        set_lookup_flatten(&mut region_map, i);
     }
 
     // early return to ensure maze algos always recieve a maze with at least
@@ -398,7 +417,7 @@ pub fn generate_maze(
     let mut region_slices: Vec<&[Point]> = Vec::new();
     let mut current_region = region_map[0].1;
     let mut start_index = 0;
-    for (indx, &(i, r)) in region_map.iter().enumerate() {
+    for (indx, &(_, r)) in region_map.iter().enumerate() {
         if r != current_region {
             region_slices.push(&open_tiles[start_index..indx]);
             start_index = indx;
@@ -1177,7 +1196,7 @@ fn flood_tile_backtrack(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point, rn
     }
 }
 
-fn create_maze_noise(maze: &mut Grid, history: &mut Vec<(Point, Direction)>, rng: &mut impl Rng) {
+fn create_maze_noise(maze: &mut Grid, _history: &mut Vec<(Point, Direction)>, rng: &mut impl Rng) {
     let noise_map: Vec<u8> = generate_noise(maze.width, maze.height, 7, 7, rng)
         .iter()
         .map(|x| if *x < 0.0 { 0 } else { 1 })
@@ -1195,7 +1214,6 @@ fn create_maze_noise(maze: &mut Grid, history: &mut Vec<(Point, Direction)>, rng
     */
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1204,15 +1222,23 @@ mod tests {
     fn opposite() {
         let result_north = Direction::North.opposite();
         assert_eq!(result_north, Direction::South);
+        let result_northeast = Direction::NorthEast.opposite();
+        assert_eq!(result_northeast, Direction::SouthWest);
 
         let result_east = Direction::East.opposite();
         assert_eq!(result_east, Direction::West);
+        let result_eastsouth = Direction::SouthEast.opposite();
+        assert_eq!(result_eastsouth, Direction::NorthWest);
 
         let result_south = Direction::South.opposite();
         assert_eq!(result_south, Direction::North);
+        let result_southwest = Direction::SouthWest.opposite();
+        assert_eq!(result_southwest, Direction::NorthEast);
 
         let result_west = Direction::West.opposite();
         assert_eq!(result_west, Direction::East);
+        let result_westnorth = Direction::NorthWest.opposite();
+        assert_eq!(result_westnorth, Direction::SouthEast);
     }
 
     #[test]
