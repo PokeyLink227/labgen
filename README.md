@@ -14,7 +14,7 @@
 
 ### Warnings
 
-- mazes with wrapping and rooms will develop loops
+- None (for now)
 
 ## Feature descriptions
 - Exclusions

@@ -359,7 +359,8 @@ pub fn generate_maze(
     let mut region_map: Vec<u32> = (0..maze.tiles.len() as u32).collect();
     for y in 0..height as i16 {
         for x in 0..width as i16 {
-            let status = maze.get_tile(Point::new(x, y)).status;
+            let pos = Point::new(x, y);
+            let status = maze.get_tile(pos).status;
 
             // we need to connect all unvisited tiles and all rooms to each other seperately
             if status == ConnectionStatus::UnVisited {
@@ -368,19 +369,29 @@ pub fn generate_maze(
                 continue;
             }
 
-            if x > 0 && maze.get_tile(Point::new(x - 1, y)).status == status {
+            if (wrap == Some(MazeWrap::Full) || wrap == Some(MazeWrap::Horizontal) || x > 0)
+                && maze
+                    .get_tile(pos.travel_wrapped(Direction::West, maze.width, maze.height))
+                    .status
+                    == status
+            {
                 merge_sets(
                     &mut region_map,
-                    maze.get_index(Point::new(x, y)),
-                    maze.get_index(Point::new(x - 1, y)),
+                    maze.get_index(pos),
+                    maze.get_index(pos.travel_wrapped(Direction::West, maze.width, maze.height)),
                 );
             }
 
-            if y > 0 && maze.get_tile(Point::new(x, y - 1)).status == status {
+            if (wrap == Some(MazeWrap::Full) || wrap == Some(MazeWrap::Vertical) || y > 0)
+                && maze
+                    .get_tile(pos.travel_wrapped(Direction::North, maze.width, maze.height))
+                    .status
+                    == status
+            {
                 merge_sets(
                     &mut region_map,
-                    maze.get_index(Point::new(x, y)),
-                    maze.get_index(Point::new(x, y - 1)),
+                    maze.get_index(pos),
+                    maze.get_index(pos.travel_wrapped(Direction::North, maze.width, maze.height)),
                 );
             }
         }
@@ -894,25 +905,19 @@ fn create_maze_kruskal(
                 continue;
             }
 
-            if wrap == Some(MazeWrap::Full) || wrap == Some(MazeWrap::Horizontal) {
-                if maze
+            if (wrap == Some(MazeWrap::Full) || wrap == Some(MazeWrap::Horizontal) || x > 0)
+                && maze
                     .get_tile(pos.travel_wrapped(Direction::West, maze.width, maze.height))
                     .carveable()
-                {
-                    edges.push((pos, Direction::West));
-                }
-            } else if x > 0 && maze.get_tile(pos.travel(Direction::West)).carveable() {
+            {
                 edges.push((pos, Direction::West));
             }
 
-            if wrap == Some(MazeWrap::Full) || wrap == Some(MazeWrap::Vertical) {
-                if maze
+            if (wrap == Some(MazeWrap::Full) || wrap == Some(MazeWrap::Vertical) || y > 0)
+                && maze
                     .get_tile(pos.travel_wrapped(Direction::North, maze.width, maze.height))
                     .carveable()
-                {
-                    edges.push((pos, Direction::North));
-                }
-            } else if y > 0 && maze.get_tile(pos.travel(Direction::North)).carveable() {
+            {
                 edges.push((pos, Direction::North));
             }
         }
