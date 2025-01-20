@@ -536,7 +536,11 @@ pub fn generate_maze(
         for y in 0..room.h as i16 {
             for x in 0..room.w as i16 {
                 let pos = Point::new(room.x + x, room.y + y);
-                pos.adjacent()
+                let adj = match wrap {
+                    Some(w) => pos.adjacent_wrapped(w, maze.width, maze.height),
+                    None => pos.adjacent(),
+                };
+                adj
                     .enumerate()
                     .filter(|&(_, x)| {
                         maze.contains(x) && maze.get_tile(x).status == ConnectionStatus::InMaze
@@ -551,7 +555,11 @@ pub fn generate_maze(
     edges.shuffle(rng);
     for e in edges {
         let node1 = e.0;
-        let node2 = e.0.travel(e.1);
+        let node2 = if wrap.is_some() {
+            e.0.travel_wrapped(e.1, maze.width, maze.height)
+        } else {
+            e.0.travel(e.1)
+        };
 
         // if edge connects 2 different regions
         if merge_sets(
