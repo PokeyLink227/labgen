@@ -20,6 +20,7 @@ pub struct AnimationOptions {
 pub fn generate_gif_uncompressed(
     maze: &Grid,
     history: &[(Point, Direction)],
+    rooms: &[Rect],
     opts: &ImageOptions,
     ani_opts: &AnimationOptions,
 ) {
@@ -35,6 +36,20 @@ pub fn generate_gif_uncompressed(
         BufWriter::new(File::create(format!("{}.gif", &opts.file_path).as_str()).unwrap());
     let mut encoder = Encoder::new(&mut image, width, height, &opts.color_map).unwrap();
     encoder.set_repeat(Repeat::Infinite).unwrap();
+
+    // draw all rooms in one pass
+    for r in rooms {
+        let area_width = r.w as u16 * cell_width - opts.wall_width;
+        let area_height = r.h as u16 * cell_width - opts.wall_width;
+        let area_top = r.y as u16 * cell_width + opts.wall_width;
+        let area_left = r.x as u16 * cell_width + opts.wall_width;
+
+        for y in area_top..(area_top + area_height) {
+            for x in area_left..(area_left + area_width) {
+                state[x as usize + (y as usize * width as usize)] = 1;
+            }
+        }
+    }
 
     let mut frame_num = 0;
     for (pt, dir) in history {
@@ -140,8 +155,8 @@ pub fn generate_gif(
     for r in rooms {
         let mut frame = Frame::default();
         frame.delay = ani_opts.frame_time;
-        frame.width = cell_width * r.w as u16 - opts.wall_width;
-        frame.height = cell_width * r.h as u16 - opts.wall_width;
+        frame.width = r.w as u16 * cell_width - opts.wall_width;
+        frame.height = r.h as u16 * cell_width - opts.wall_width;
         frame.top = r.y as u16 * cell_width + opts.wall_width;
         frame.left = r.x as u16 * cell_width + opts.wall_width;
 
