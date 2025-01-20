@@ -141,9 +141,9 @@ impl Vector2<f32> {
 pub enum ConnectionStatus {
     #[default]
     UnVisited,
-    //Visited,
     InMaze,
     Removed,
+    Room,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, clap::ValueEnum)]
@@ -222,12 +222,20 @@ impl Tile {
         self.connections |= dir as u8;
     }
 
-    pub fn connected(&self, dir: Direction) -> bool {
+    pub fn connected(self, dir: Direction) -> bool {
         self.connections & dir as u8 != 0
     }
 
     pub fn set_connected(&mut self, dir: Direction) {
         self.connections = dir as u8;
+    }
+
+    pub fn carveable(self) -> bool {
+        self.status == ConnectionStatus::UnVisited
+    }
+
+    pub fn uncarveable(self) -> bool {
+        self.status == ConnectionStatus::Removed || self.status == ConnectionStatus::Room
     }
 }
 
@@ -337,7 +345,7 @@ pub fn generate_maze(
                         | Direction::SouthEast as u8);
                 }
 
-                maze.get_tile_mut(Point::new(x + r.x, y + r.y)).status = ConnectionStatus::InMaze;
+                maze.get_tile_mut(Point::new(x + r.x, y + r.y)).status = ConnectionStatus::Room;
                 maze.get_tile_mut(Point::new(x + r.x, y + r.y)).connections |= connections;
             }
         }
@@ -348,13 +356,16 @@ pub fn generate_maze(
     let mut region_map: Vec<u32> = (0..maze.tiles.len() as u32).collect();
     for y in 0..height as i16 {
         for x in 0..width as i16 {
-            if maze.get_tile(Point::new(x, y)).status != ConnectionStatus::UnVisited {
+            let status = maze.get_tile(Point::new(x, y)).status;
+
+            // we need to connect all unvisited tiles and all rooms to each other seperately
+            if status == ConnectionStatus::UnVisited {
+                num_unvisited += 1;
+            } else if status != ConnectionStatus::Room {
                 continue;
             }
 
-            num_unvisited += 1;
-
-            if x > 0 && maze.get_tile(Point::new(x - 1, y)).status == ConnectionStatus::UnVisited {
+            if x > 0 && maze.get_tile(Point::new(x - 1, y)).status == status {
                 merge_sets(
                     &mut region_map,
                     maze.get_index(Point::new(x, y)),
@@ -362,7 +373,7 @@ pub fn generate_maze(
                 );
             }
 
-            if y > 0 && maze.get_tile(Point::new(x, y - 1)).status == ConnectionStatus::UnVisited {
+            if y > 0 && maze.get_tile(Point::new(x, y - 1)).status == status {
                 merge_sets(
                     &mut region_map,
                     maze.get_index(Point::new(x, y)),
@@ -375,6 +386,12 @@ pub fn generate_maze(
     // ensure all regions are equal to their parent for easy comparisons
     for i in 0..region_map.len() {
         set_lookup_flatten(&mut region_map, i);
+        if false {
+            print!("{:3} ", region_map[i]);
+            if i as u16 % width == width - 1 {
+                println!();
+            }
+        }
     }
 
     // early return to ensure maze algos always recieve a maze with at least
@@ -491,6 +508,14 @@ pub fn generate_maze(
         }
     }
 
+    // add in doors to connect rooms to the rest of the maze
+    for room in rooms {
+        // generate the list of edges out of the room
+        // filter by the ones that connect 2 different regions
+        // group the edges by which region they connect to
+        // for each group of edges pick one and add it to the maze
+    }
+
     (maze, history)
 }
 
@@ -517,9 +542,7 @@ fn create_maze_backtrack(
         };
         let next = adj
             .enumerate()
-            .filter(|&(_, x)| {
-                maze.contains(x) && maze.get_tile(x).status == ConnectionStatus::UnVisited
-            })
+            .filter(|&(_, x)| maze.contains(x) && maze.get_tile(x).carveable())
             .collect::<Vec<(usize, Point)>>()
             .choose(rng)
             .copied();
@@ -567,9 +590,7 @@ fn create_maze_prim(
         };
         let next = adj
             .enumerate()
-            .filter(|&(_, x)| {
-                maze.contains(x) && maze.get_tile(x).status == ConnectionStatus::UnVisited
-            })
+            .filter(|&(_, x)| maze.contains(x) && maze.get_tile(x).carveable())
             .collect::<Vec<(usize, Point)>>()
             .choose(rng)
             .copied();
@@ -598,14 +619,12 @@ fn create_maze_binary(maze: &mut Grid, history: &mut Vec<(Point, Direction)>, rn
 
     for y in 0..maze.height as i16 {
         for x in 0..maze.width as i16 {
-            if maze.get_tile(Point::new(x, y)).status != ConnectionStatus::UnVisited {
+            if !maze.get_tile(Point::new(x, y)).carveable() {
                 continue;
             }
 
-            let north_open: bool =
-                y > 0 && maze.get_tile(Point::new(x, y - 1)).status != ConnectionStatus::Removed;
-            let west_open: bool =
-                x > 0 && maze.get_tile(Point::new(x - 1, y)).status != ConnectionStatus::Removed;
+            let north_open: bool = y > 0 && !maze.get_tile(Point::new(x, y - 1)).uncarveable();
+            let west_open: bool = x > 0 && !maze.get_tile(Point::new(x - 1, y)).uncarveable();
 
             let dir: u8 = if west_open && north_open {
                 rng.gen_range(0..=1)
@@ -727,9 +746,7 @@ fn create_maze_growingtree(
         };
         let next = adj
             .enumerate()
-            .filter(|&(_, x)| {
-                maze.contains(x) && maze.get_tile(x).status == ConnectionStatus::UnVisited
-            })
+            .filter(|&(_, x)| maze.contains(x) && maze.get_tile(x).carveable())
             .collect::<Vec<(usize, Point)>>()
             .choose(rng)
             .copied();
@@ -770,7 +787,7 @@ fn create_maze_wilson(
 
     'outer: loop {
         // pick a cell not already in the maze
-        while maze.get_tile(anchor).status != ConnectionStatus::UnVisited {
+        while !maze.get_tile(anchor).carveable() {
             reservoir_index += 1;
             if reservoir_index >= reservoir.len() {
                 break 'outer;
@@ -788,9 +805,7 @@ fn create_maze_wilson(
             };
             let next = adj
                 .enumerate()
-                .filter(|&(_, x)| {
-                    maze.contains(x) && maze.get_tile(x).status != ConnectionStatus::Removed
-                })
+                .filter(|&(_, x)| maze.contains(x) && !maze.get_tile(x).uncarveable())
                 .collect::<Vec<(usize, Point)>>()
                 .choose(rng)
                 .copied()
@@ -836,35 +851,29 @@ fn create_maze_kruskal(
     for y in 0..maze.height as i16 {
         for x in 0..maze.width as i16 {
             let pos = Point::new(x, y);
-            if maze.get_tile(pos).status == ConnectionStatus::Removed {
+            if maze.get_tile(pos).uncarveable() {
                 continue;
             }
 
             if wrap == Some(MazeWrap::Full) || wrap == Some(MazeWrap::Horizontal) {
                 if maze
                     .get_tile(pos.travel_wrapped(Direction::West, maze.width, maze.height))
-                    .status
-                    != ConnectionStatus::Removed
+                    .carveable()
                 {
                     edges.push((pos, Direction::West));
                 }
-            } else if x > 0
-                && maze.get_tile(pos.travel(Direction::West)).status != ConnectionStatus::Removed
-            {
+            } else if x > 0 && maze.get_tile(pos.travel(Direction::West)).carveable() {
                 edges.push((pos, Direction::West));
             }
 
             if wrap == Some(MazeWrap::Full) || wrap == Some(MazeWrap::Vertical) {
                 if maze
                     .get_tile(pos.travel_wrapped(Direction::North, maze.width, maze.height))
-                    .status
-                    != ConnectionStatus::Removed
+                    .carveable()
                 {
                     edges.push((pos, Direction::North));
                 }
-            } else if y > 0
-                && maze.get_tile(pos.travel(Direction::North)).status != ConnectionStatus::Removed
-            {
+            } else if y > 0 && maze.get_tile(pos.travel(Direction::North)).carveable() {
                 edges.push((pos, Direction::North));
             }
         }

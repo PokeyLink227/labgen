@@ -208,46 +208,34 @@ pub fn generate_png(maze: &Grid, opts: &ImageOptions) {
 
     for py in 0..maze.height {
         for px in 0..maze.width {
-            if maze
-                .get_tile(Point {
-                    x: px as i16,
-                    y: py as i16,
-                })
-                .status
-                != ConnectionStatus::InMaze
-            {
+            let tile = maze.get_tile(Point::new(px as i16, py as i16));
+            if !(tile.status == ConnectionStatus::InMaze || tile.status == ConnectionStatus::Room) {
                 continue;
             }
 
             let top: u16 = py as u16 * cell_width + opts.wall_width;
             let left: u16 = px as u16 * cell_width + opts.wall_width;
-            let connections = maze
-                .get_tile(Point {
-                    x: px as i16,
-                    y: py as i16,
-                })
-                .connections;
 
             for y in 0..opts.passage_width {
                 for x in 0..opts.passage_width {
                     pixels[(x + left) as usize + ((y + top) as usize * width as usize)] = 1;
                 }
             }
-            if connections & Direction::East as u8 != 0 {
+            if tile.connections & Direction::East as u8 != 0 {
                 for y in 0..opts.passage_width {
                     for x in opts.passage_width..cell_width {
                         pixels[(x + left) as usize + ((y + top) as usize * width as usize)] = 1;
                     }
                 }
             }
-            if connections & Direction::South as u8 != 0 {
+            if tile.connections & Direction::South as u8 != 0 {
                 for y in opts.passage_width..cell_width {
                     for x in 0..opts.passage_width {
                         pixels[(x + left) as usize + ((y + top) as usize * width as usize)] = 1;
                     }
                 }
             }
-            if connections & Direction::SouthEast as u8 != 0 {
+            if tile.connections & Direction::SouthEast as u8 != 0 {
                 for y in opts.passage_width..cell_width {
                     for x in opts.passage_width..cell_width {
                         pixels[(x + left) as usize + ((y + top) as usize * width as usize)] = 1;
@@ -258,7 +246,7 @@ pub fn generate_png(maze: &Grid, opts: &ImageOptions) {
             // only needed for wrapping mazes
             // only chekc on edges to reduce overdraw
             if px == 0 {
-                if connections & Direction::West as u8 != 0 {
+                if tile.connections & Direction::West as u8 != 0 {
                     for y in 0..opts.passage_width {
                         for x in 0..=opts.wall_width {
                             pixels[(left - x) as usize + ((y + top) as usize * width as usize)] = 1;
@@ -268,7 +256,7 @@ pub fn generate_png(maze: &Grid, opts: &ImageOptions) {
             }
 
             if py == 0 {
-                if connections & Direction::North as u8 != 0 {
+                if tile.connections & Direction::North as u8 != 0 {
                     for y in 0..=opts.wall_width {
                         for x in 0..opts.passage_width {
                             pixels[(x + left) as usize + ((top - y) as usize * width as usize)] = 1;
