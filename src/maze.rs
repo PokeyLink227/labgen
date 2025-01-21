@@ -602,6 +602,7 @@ pub fn generate_maze(
 
                 if maze.get_tile(pos).status == ConnectionStatus::InMaze && maze.get_tile(pos).count_connections() == 0 {
                     maze.get_tile_mut(pos).status = ConnectionStatus::Removed;
+                    history.push(MazeAction::Remove(pos, Direction::NoDir));
                 }
 
                 // trace path while current cell is a deadend
