@@ -1,4 +1,4 @@
-use crate::maze::{ConnectionStatus, Direction, Grid, Point, Rect};
+use crate::maze::{ConnectionStatus, Direction, Grid, Point, Rect, MazeAction};
 use gif::{DisposalMethod, Encoder, Frame, Repeat};
 use std::{borrow::Cow, fs::File, io::BufWriter};
 
@@ -19,7 +19,7 @@ pub struct AnimationOptions {
 
 pub fn generate_gif_uncompressed(
     maze: &Grid,
-    history: &[(Point, Direction)],
+    history: &[MazeAction],
     rooms: &[Rect],
     opts: &ImageOptions,
     ani_opts: &AnimationOptions,
@@ -52,7 +52,15 @@ pub fn generate_gif_uncompressed(
     }
 
     let mut frame_num = 0;
-    for (pt, dir) in history {
+    for action in history {
+        let (pt, dir, cell_filling) = match action {
+            MazeAction::Add(pt, dir) => {
+                (pt, dir, 1)
+            }
+            MazeAction::Remove(pt, dir) => {
+                (pt, dir, 0)
+            }
+        };
         let area_top: u16;
         let area_left: u16;
         let area_width: u16;
@@ -96,7 +104,7 @@ pub fn generate_gif_uncompressed(
 
         for y in area_top..(area_top + area_height) {
             for x in area_left..(area_left + area_width) {
-                state[x as usize + (y as usize * width as usize)] = 1;
+                state[x as usize + (y as usize * width as usize)] = cell_filling;
             }
         }
 
@@ -122,7 +130,7 @@ pub fn generate_gif_uncompressed(
 
 pub fn generate_gif(
     maze: &Grid,
-    history: &[(Point, Direction)],
+    history: &[MazeAction],
     rooms: &[Rect],
     opts: &ImageOptions,
     ani_opts: &AnimationOptions,
@@ -137,6 +145,7 @@ pub fn generate_gif(
     let empty_maze: Vec<u8> = vec![0; width as usize * height as usize];
     let full_maze: Vec<u8> = vec![1; width as usize * height as usize];
     let connected_cell: Vec<u8> = vec![1; (cell_width * cell_width) as usize];
+    let blank_cell: Vec<u8> = vec![0; (cell_width * cell_width) as usize];
 
     let mut image =
         BufWriter::new(File::create(format!("{}.gif", &opts.file_path).as_str()).unwrap());
@@ -165,7 +174,15 @@ pub fn generate_gif(
         encoder.write_frame(&frame).unwrap();
     }
 
-    for (pt, dir) in history {
+    for action in history {
+        let (pt, dir, cell_filling) = match action {
+            MazeAction::Add(pt, dir) => {
+                (pt, dir, &connected_cell)
+            }
+            MazeAction::Remove(pt, dir) => {
+                (pt, dir, &blank_cell)
+            }
+        };
         let mut frame = Frame::default();
         frame.delay = ani_opts.frame_time;
 
@@ -204,7 +221,7 @@ pub fn generate_gif(
             _ => todo!("Diagonal travel is not supported yet"),
         }
 
-        frame.buffer = Cow::Borrowed(&connected_cell);
+        frame.buffer = Cow::Borrowed(cell_filling);
         frame.dispose = DisposalMethod::Keep;
         encoder.write_frame(&frame).unwrap();
     }
