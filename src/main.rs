@@ -75,6 +75,10 @@ struct Args {
     /// directional wrapping across buondries
     #[arg(short = 'w', long = "wrap")]
     wrap: Option<MazeWrap>,
+
+    /// remove deadends from the maze leaving only rooms and paths between them
+    #[arg(short = 'r', long = "remove-deadends")]
+    uncarve: bool,
 }
 
 fn main() {
@@ -115,6 +119,7 @@ fn main() {
         args.wrap,
         &rooms,
         &exclude,
+        args.uncarve,
         &mut rng,
     );
     let maze_time = now.elapsed();

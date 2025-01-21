@@ -225,6 +225,10 @@ impl Tile {
         self.connections |= dir as u8;
     }
 
+    pub fn unconnect(&mut self, dir: Direction) {
+        self.connections &= !(dir as u8);
+    }
+
     pub fn connected(self, dir: Direction) -> bool {
         self.connections & dir as u8 != 0
     }
@@ -239,6 +243,16 @@ impl Tile {
 
     pub fn uncarveable(self) -> bool {
         self.status == ConnectionStatus::Removed || self.status == ConnectionStatus::Room
+    }
+
+    pub fn count_connections(self) -> u8 {
+        let mut num_connections = 0;
+
+        for shift in 0..8 {
+            num_connections += (self.connections >> shift) & 1;
+        }
+
+        num_connections
     }
 }
 
@@ -295,6 +309,7 @@ pub fn generate_maze(
     wrap: Option<MazeWrap>,
     rooms: &[Rect],
     exclusions: &[Rect],
+    uncarve: bool,
     rng: &mut impl Rng,
 ) -> (Grid, Vec<(Point, Direction)>) {
     let mut maze: Grid = Grid {
@@ -573,6 +588,34 @@ pub fn generate_maze(
             maze.get_tile_mut(node2).connect(e.1.opposite());
         }
     }
+
+    // uncarve deadends
+    if uncarve {
+        for y in 0..maze.height as i16 {
+            for x in 0..maze.width as i16 {
+                let mut pos = Point::new(x, y);
+
+                if maze.get_tile(pos).status == ConnectionStatus::InMaze && maze.get_tile(pos).count_connections() == 0 {
+                    maze.get_tile_mut(pos).status = ConnectionStatus::Removed;
+                }
+
+                // trace path while current cell is a deadend
+                while maze.get_tile(pos).status == ConnectionStatus::InMaze && maze.get_tile(pos).count_connections() == 1 {
+                    let dir = maze.get_tile(pos).connections.into();
+                    maze.get_tile_mut(pos).status = ConnectionStatus::Removed;
+
+                    if wrap.is_some() {
+                        pos = pos.travel_wrapped(dir, maze.width, maze.height);
+                    } else {
+                        pos = pos.travel(dir);
+                    }
+
+                    maze.get_tile_mut(pos).unconnect(dir.opposite());
+                }
+            }
+        }
+    }
+
 
     (maze, history)
 }
@@ -1306,5 +1349,24 @@ mod tests {
 
         let result_west = Direction::from_clock_cardinal(3);
         assert_eq!(result_west, Direction::West);
+    }
+
+    #[test]
+    fn tile() {
+        let mut t = Tile::default();
+
+        assert_eq!(t.count_connections(), 0);
+
+        t.connect(Direction::North);
+        assert_eq!(t.count_connections(), 1);
+
+        t.connect(Direction::South);
+        assert_eq!(t.count_connections(), 2);
+
+        t.connect(Direction::East);
+        assert_eq!(t.count_connections(), 3);
+
+        t.unconnect(Direction::South);
+        assert_eq!(t.count_connections(), 2);
     }
 }
