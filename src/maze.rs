@@ -158,6 +158,7 @@ pub enum MazeType {
     GrowingTree,
     Wilson,
     Kruskal,
+    PrimSimple,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, clap::ValueEnum)]
@@ -486,7 +487,7 @@ pub fn generate_maze(
         }
         MazeType::Prim => {
             for region in region_slices {
-                create_maze_prim(
+                create_maze_prim_true(
                     &mut maze,
                     *region.choose(rng).unwrap(),
                     wrap,
@@ -542,6 +543,17 @@ pub fn generate_maze(
             }
             create_maze_kruskal(&mut maze, wrap, &mut history, rng);
         }
+        MazeType::PrimSimple => {
+            for region in region_slices {
+                create_maze_prim_simple(
+                    &mut maze,
+                    *region.choose(rng).unwrap(),
+                    wrap,
+                    &mut history,
+                    rng,
+                );
+            }
+        }
     }
 
     // add in doors to connect rooms to the rest of the maze
@@ -561,8 +573,7 @@ pub fn generate_maze(
                     Some(w) => pos.adjacent_wrapped(w, maze.width, maze.height),
                     None => pos.adjacent(),
                 };
-                adj
-                    .enumerate()
+                adj.enumerate()
                     .filter(|&(_, x)| {
                         maze.contains(x) && maze.get_tile(x).status == ConnectionStatus::InMaze
                     })
@@ -600,13 +611,17 @@ pub fn generate_maze(
             for x in 0..maze.width as i16 {
                 let mut pos = Point::new(x, y);
 
-                if maze.get_tile(pos).status == ConnectionStatus::InMaze && maze.get_tile(pos).count_connections() == 0 {
+                if maze.get_tile(pos).status == ConnectionStatus::InMaze
+                    && maze.get_tile(pos).count_connections() == 0
+                {
                     maze.get_tile_mut(pos).status = ConnectionStatus::Removed;
                     history.push(MazeAction::Remove(pos, Direction::NoDir));
                 }
 
                 // trace path while current cell is a deadend
-                while maze.get_tile(pos).status == ConnectionStatus::InMaze && maze.get_tile(pos).count_connections() == 1 {
+                while maze.get_tile(pos).status == ConnectionStatus::InMaze
+                    && maze.get_tile(pos).count_connections() == 1
+                {
                     let dir = maze.get_tile(pos).connections.into();
                     maze.get_tile_mut(pos).status = ConnectionStatus::Removed;
                     history.push(MazeAction::Remove(pos, dir));
@@ -622,7 +637,6 @@ pub fn generate_maze(
             }
         }
     }
-
 
     (maze, history)
 }
@@ -674,7 +688,7 @@ fn create_maze_backtrack(
     }
 }
 
-fn create_maze_prim(
+fn create_maze_prim_simple(
     maze: &mut Grid,
     start_pos: Point,
     wrap: Option<MazeWrap>,
@@ -783,9 +797,10 @@ fn create_maze_sidewinder(
         .connect(D::West);
     maze.get_tile_mut(Point::new((maze.width - 1) as i16, 0))
         .status = ConnectionStatus::InMaze;
-    history.push(MazeAction::Add(Point::new((maze.width - 1) as i16, 0), D::West));
-
-
+    history.push(MazeAction::Add(
+        Point::new((maze.width - 1) as i16, 0),
+        D::West,
+    ));
 
     for y in 1..maze.height as i16 {
         let mut range_start = if wrap.is_some() {
@@ -804,7 +819,10 @@ fn create_maze_sidewinder(
                 range_len += 1;
             }
 
-            let vert_pos = Point::new(((rng.gen_range(0..range_len) + range_start) % maze.width) as i16, y);
+            let vert_pos = Point::new(
+                ((rng.gen_range(0..range_len) + range_start) % maze.width) as i16,
+                y,
+            );
             let mut pos = Point::new(range_start as i16, y);
             maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
 
@@ -822,11 +840,11 @@ fn create_maze_sidewinder(
             }
 
             maze.get_tile_mut(vert_pos).connect(D::North);
-            maze.get_tile_mut(vert_pos.travel(D::North)).connect(D::South);
+            maze.get_tile_mut(vert_pos.travel(D::North))
+                .connect(D::South);
             range_start = (range_start + range_len) % maze.width;
             cells_added += range_len;
         }
-
     }
 }
 
@@ -1066,6 +1084,55 @@ fn merge_sets(region_map: &mut [u32], lhs: usize, rhs: usize) -> bool {
     region_map[lhs_parent as usize] = rhs_parent;
 
     true
+}
+
+fn create_maze_prim_true(
+    maze: &mut Grid,
+    start_pos: Point,
+    wrap: Option<MazeWrap>,
+    history: &mut Vec<MazeAction>,
+    rng: &mut impl Rng,
+) {
+    let mut open: Vec<(Point, Direction)> = Vec::new();
+
+    maze.get_tile_mut(start_pos).status = ConnectionStatus::InMaze;
+    history.push(MazeAction::Add(start_pos, Direction::NoDir));
+
+    match wrap {
+        Some(w) => start_pos.adjacent_wrapped(w, maze.width, maze.height),
+        None => start_pos.adjacent(),
+    }
+    .enumerate()
+    .filter(|&(_, p)| maze.contains(p) && maze.get_tile(p).carveable())
+    .for_each(|(i, p)| open.push((p, Direction::from_clock_cardinal(i as u8).opposite())));
+
+    while !open.is_empty() {
+        let edge = open.swap_remove(rng.gen_range(0..open.len()));
+
+        if maze.get_tile(edge.0).status != ConnectionStatus::UnVisited {
+            continue;
+        }
+
+        maze.get_tile_mut(edge.0).status = ConnectionStatus::InMaze;
+        maze.get_tile_mut(edge.0).connect(edge.1);
+
+        history.push(MazeAction::Add(edge.0, edge.1));
+
+        let target = if wrap.is_some() {
+            edge.0.travel_wrapped(edge.1, maze.width, maze.height)
+        } else {
+            edge.0.travel(edge.1)
+        };
+        maze.get_tile_mut(target).connect(edge.1.opposite());
+
+        match wrap {
+            Some(w) => edge.0.adjacent_wrapped(w, maze.width, maze.height),
+            None => edge.0.adjacent(),
+        }
+        .enumerate()
+        .filter(|&(_, p)| maze.contains(p) && maze.get_tile(p).carveable())
+        .for_each(|(i, p)| open.push((p, Direction::from_clock_cardinal(i as u8).opposite())));
+    }
 }
 
 fn interpolate(a: f32, b: f32, s: f32) -> f32 {

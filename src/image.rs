@@ -1,4 +1,4 @@
-use crate::maze::{ConnectionStatus, Direction, Grid, Point, Rect, MazeAction};
+use crate::maze::{ConnectionStatus, Direction, Grid, MazeAction, Point, Rect};
 use gif::{DisposalMethod, Encoder, Frame, Repeat};
 use std::{borrow::Cow, fs::File, io::BufWriter};
 
@@ -54,12 +54,8 @@ pub fn generate_gif_uncompressed(
     let mut frame_num = 0;
     for action in history {
         let (pt, dir, cell_filling) = match action {
-            MazeAction::Add(pt, dir) => {
-                (pt, dir, 1)
-            }
-            MazeAction::Remove(pt, dir) => {
-                (pt, dir, 0)
-            }
+            MazeAction::Add(pt, dir) => (pt, dir, 1),
+            MazeAction::Remove(pt, dir) => (pt, dir, 0),
         };
         let area_top: u16;
         let area_left: u16;
@@ -176,12 +172,8 @@ pub fn generate_gif(
 
     for action in history {
         let (pt, dir, cell_filling) = match action {
-            MazeAction::Add(pt, dir) => {
-                (pt, dir, &connected_cell)
-            }
-            MazeAction::Remove(pt, dir) => {
-                (pt, dir, &blank_cell)
-            }
+            MazeAction::Add(pt, dir) => (pt, dir, &connected_cell),
+            MazeAction::Remove(pt, dir) => (pt, dir, &blank_cell),
         };
         let mut frame = Frame::default();
         frame.delay = ani_opts.frame_time;
