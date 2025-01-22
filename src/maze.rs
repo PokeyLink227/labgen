@@ -316,7 +316,7 @@ pub fn generate_maze(
     wrap: Option<MazeWrap>,
     rooms: &[Rect],
     exclusions: &[Rect],
-    uncarve: bool,
+    uncarve_percent: u8,
     rng: &mut impl Rng,
 ) -> (Grid, Vec<MazeAction>) {
     let mut maze: Grid = Grid {
@@ -606,35 +606,45 @@ pub fn generate_maze(
     }
 
     // uncarve deadends
-    if uncarve {
+    if uncarve_percent > 0 {
+        let mut deadends = Vec::new();
+
         for y in 0..maze.height as i16 {
             for x in 0..maze.width as i16 {
-                let mut pos = Point::new(x, y);
-
+                let pos = Point::new(x, y);
                 if maze.get_tile(pos).status == ConnectionStatus::InMaze
-                    && maze.get_tile(pos).count_connections() == 0
+                    && maze.get_tile(pos).count_connections() <= 1
                 {
-                    maze.get_tile_mut(pos).status = ConnectionStatus::Removed;
-                    history.push(MazeAction::Remove(pos, Direction::NoDir));
-                }
-
-                // trace path while current cell is a deadend
-                while maze.get_tile(pos).status == ConnectionStatus::InMaze
-                    && maze.get_tile(pos).count_connections() == 1
-                {
-                    let dir = maze.get_tile(pos).connections.into();
-                    maze.get_tile_mut(pos).status = ConnectionStatus::Removed;
-                    history.push(MazeAction::Remove(pos, dir));
-
-                    if wrap.is_some() {
-                        pos = pos.travel_wrapped(dir, maze.width, maze.height);
-                    } else {
-                        pos = pos.travel(dir);
-                    }
-
-                    maze.get_tile_mut(pos).unconnect(dir.opposite());
+                    deadends.push(pos);
                 }
             }
+        }
+
+        let num_to_remove = num_unvisited * uncarve_percent as u32 / 100;
+        let mut num_removed = 0;
+
+        while num_removed < num_to_remove {
+            // pick a random deadend
+            let index = rng.gen_range(0..deadends.len());
+            let pos = deadends[index];
+            maze.get_tile_mut(pos).status = ConnectionStatus::Removed;
+
+            if maze.get_tile(pos).count_connections() == 0 {
+                history.push(MazeAction::Remove(pos, Direction::NoDir));
+                deadends.swap_remove(index);
+            } else {
+                let dir: Direction = maze.get_tile(pos).connections.into();
+                let new_pos = pos.travel(dir);
+                maze.get_tile_mut(new_pos).unconnect(dir.opposite());
+
+                if maze.get_tile(new_pos).count_connections() == 1 {
+                    deadends[index] = new_pos;
+                } else {
+                    deadends.swap_remove(index);
+                }
+            }
+
+            num_removed += 1;
         }
     }
 

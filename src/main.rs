@@ -1,7 +1,5 @@
 use crate::{
-    image::{
-        generate_gif, generate_gif_compressed, generate_png, AnimationOptions, ImageOptions,
-    },
+    image::{generate_gif, generate_gif_compressed, generate_png, AnimationOptions, ImageOptions},
     maze::{generate_maze, MazeType, MazeWrap, Rect},
 };
 use clap::Parser;
@@ -76,9 +74,15 @@ struct Args {
     #[arg(short = 'w', long = "wrap")]
     wrap: Option<MazeWrap>,
 
-    /// remove deadends from the maze leaving only rooms and paths between them
-    #[arg(short = 'r', long = "remove-deadends")]
-    uncarve: bool,
+    /// remove percent% of the deadends from the maze
+    #[arg(
+        short = 'r',
+        long = "remove-deadends",
+        default_value = "0",
+        value_name = "percent",
+        value_parser = clap::value_parser!(u8).range(0..100),
+    )]
+    uncarve_percent: u8,
 }
 
 fn main() {
@@ -100,7 +104,7 @@ fn main() {
         args.wrap,
         &rooms,
         &exclude,
-        args.uncarve,
+        args.uncarve_percent,
         &mut rng,
     );
     let maze_time = now.elapsed();
