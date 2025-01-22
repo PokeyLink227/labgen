@@ -20,7 +20,7 @@
 | backtrack    | ✅ | ✅ | ✅ |
 | prim         | ✅ | ✅ | ✅ |
 | binary-tree  | ❌ | ✅ | ✅ |
-| sidewinder   | ❌ | ❌ | ❌ |
+| sidewinder   | horizontal only | ❌ | ❌ |
 | noise        | ❌ | ❌ | ❌ |
 | growing-tree | ✅ | ✅ | ✅ |
 | wilsons      | ✅ | ✅ | ✅ |

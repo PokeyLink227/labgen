@@ -524,7 +524,7 @@ pub fn generate_maze(
             }
         }
         MazeType::BinaryTree => create_maze_binary(&mut maze, &mut history, rng),
-        MazeType::Sidewinder => create_maze_sidewinder(&mut maze, &mut history, rng),
+        MazeType::Sidewinder => create_maze_sidewinder(&mut maze, wrap, &mut history, rng),
         MazeType::Noise => create_maze_noise(&mut maze, &mut history, rng),
         MazeType::Kruskal => {
             // kruskals only works on edges so it wont fill single tiles
@@ -763,50 +763,70 @@ fn create_maze_binary(maze: &mut Grid, history: &mut Vec<MazeAction>, rng: &mut 
 
 fn create_maze_sidewinder(
     maze: &mut Grid,
+    wrap: Option<MazeWrap>,
     history: &mut Vec<MazeAction>,
     rng: &mut impl Rng,
 ) {
-    use crate::maze::Direction::*;
+    use crate::maze::Direction as D;
 
-    maze.get_tile_mut(Point { x: 0, y: 0 }).connect(East);
+    maze.get_tile_mut(Point::new(0, 0)).connect(D::East);
     maze.get_tile_mut(Point::new(0, 0)).status = ConnectionStatus::InMaze;
-    history.push(MazeAction::Add(Point { x: 0, y: 0 }, NoDir));
+    history.push(MazeAction::Add(Point::new(0, 0), D::NoDir));
 
     for x in 1..(maze.width - 1) as i16 {
-        maze.get_tile_mut(Point { x: x, y: 0 }).connections |= East as u8 | West as u8;
+        maze.get_tile_mut(Point::new(x, 0)).connections |= D::East as u8 | D::West as u8;
         maze.get_tile_mut(Point::new(x, 0)).status = ConnectionStatus::InMaze;
-        history.push(MazeAction::Add(Point { x: x, y: 0 }, West));
+        history.push(MazeAction::Add(Point::new(x, 0), D::West));
     }
 
     maze.get_tile_mut(Point::new((maze.width - 1) as i16, 0))
-        .connect(West);
+        .connect(D::West);
     maze.get_tile_mut(Point::new((maze.width - 1) as i16, 0))
         .status = ConnectionStatus::InMaze;
-    history.push(MazeAction::Add(Point::new((maze.width - 1) as i16, 0), West));
+    history.push(MazeAction::Add(Point::new((maze.width - 1) as i16, 0), D::West));
+
+
 
     for y in 1..maze.height as i16 {
-        let mut range_start = 0;
-        for x in 0..maze.width as i16 {
-            if rng.gen::<bool>() && (x as u16) < maze.width - 1 {
-                maze.get_tile_mut(Point::new(x, y)).connect(East);
-                maze.get_tile_mut(Point::new(x, y)).status = ConnectionStatus::InMaze;
-                maze.get_tile_mut(Point::new(x + 1, y)).connect(West);
-                history.push(MazeAction::Add(Point::new(x, y), East));
-            } else {
-                maze.get_tile_mut(Point::new(x, y)).status = ConnectionStatus::InMaze;
+        let mut range_start = if wrap.is_some() {
+            rng.gen_range(0..maze.width)
+        } else {
+            0
+        };
+        let mut cells_added = 0;
 
-                if maze.get_tile(Point::new(x, y)).connected(West) {
-                    history.push(MazeAction::Add(Point::new(x, y), West));
+        while cells_added < maze.width {
+            // creates longer passages
+            //let range_len = rng.gen_range(1..=maze.width - cells_added);
+            // emulates cell by cell choice to extend the passage
+            let mut range_len = 1;
+            while range_len < maze.width - cells_added && rng.gen::<bool>() {
+                range_len += 1;
+            }
+
+            let vert_pos = Point::new(((rng.gen_range(0..range_len) + range_start) % maze.width) as i16, y);
+            let mut pos = Point::new(range_start as i16, y);
+            maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
+
+            for _ in 1..range_len {
+                maze.get_tile_mut(pos).connect(D::East);
+
+                if wrap.is_some() {
+                    pos = pos.travel_wrapped(D::East, maze.width, maze.height);
+                } else {
+                    pos = pos.travel(D::East);
                 }
 
-                let chosen = rng.gen_range(range_start..=x);
-                maze.get_tile_mut(Point::new(chosen, y)).connect(North);
-                maze.get_tile_mut(Point::new(chosen, y - 1)).connect(South);
-                history.push(MazeAction::Add(Point::new(chosen, y), North));
-
-                range_start = x + 1;
+                maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
+                maze.get_tile_mut(pos).connect(D::West);
             }
+
+            maze.get_tile_mut(vert_pos).connect(D::North);
+            maze.get_tile_mut(vert_pos.travel(D::North)).connect(D::South);
+            range_start = (range_start + range_len) % maze.width;
+            cells_added += range_len;
         }
+
     }
 }
 
