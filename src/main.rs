@@ -1,6 +1,6 @@
 use crate::{
     image::{
-        generate_gif, generate_gif_uncompressed, generate_png, AnimationOptions, ImageOptions,
+        generate_gif, generate_gif_compressed, generate_png, AnimationOptions, ImageOptions,
     },
     maze::{generate_maze, MazeType, MazeWrap, Rect},
 };
@@ -120,9 +120,9 @@ fn main() {
 
     if args.animate {
         if args.compress {
-            generate_gif(&nodes, &hist, &rooms, &opts, &ani_opts);
+            generate_gif_compressed(&nodes, &hist, &rooms, &opts, &ani_opts);
         } else {
-            generate_gif_uncompressed(&nodes, &hist, &rooms, &opts, &ani_opts);
+            generate_gif(&nodes, &hist, &rooms, &opts, &ani_opts);
         }
     } else {
         generate_png(&nodes, &opts);

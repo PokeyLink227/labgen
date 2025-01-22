@@ -17,7 +17,7 @@ pub struct AnimationOptions {
     pub batch_size: u16,
 }
 
-pub fn generate_gif_uncompressed(
+pub fn generate_gif(
     maze: &Grid,
     history: &[MazeAction],
     rooms: &[Rect],
@@ -124,7 +124,7 @@ pub fn generate_gif_uncompressed(
     encoder.write_frame(&frame).unwrap();
 }
 
-pub fn generate_gif(
+pub fn generate_gif_compressed(
     maze: &Grid,
     history: &[MazeAction],
     rooms: &[Rect],
