@@ -634,6 +634,8 @@ pub fn generate_maze(
                 deadends.swap_remove(index);
             } else {
                 let dir: Direction = maze.get_tile(pos).connections.into();
+                history.push(MazeAction::Remove(pos, dir));
+
                 let new_pos = pos.travel(dir);
                 maze.get_tile_mut(new_pos).unconnect(dir.opposite());
 
