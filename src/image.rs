@@ -181,52 +181,66 @@ pub fn generate_gif_compressed(
         encoder.write_frame(&frame).unwrap();
     }
 
+    let get_bounds = |pt: Point, dir: Direction| -> (u16, u16, u16, u16) {
+        match dir {
+            Direction::NoDir => (
+                pt.y as u16 * cell_width + opts.wall_width,
+                pt.x as u16 * cell_width + opts.wall_width,
+                opts.passage_width,
+                opts.passage_width,
+            ),
+            Direction::North => (
+                pt.y as u16 * cell_width + 0,
+                pt.x as u16 * cell_width + opts.wall_width,
+                opts.passage_width,
+                cell_width,
+            ),
+            Direction::East => (
+                pt.y as u16 * cell_width + opts.wall_width,
+                pt.x as u16 * cell_width + opts.wall_width,
+                cell_width,
+                opts.passage_width,
+            ),
+            Direction::South => (
+                pt.y as u16 * cell_width + opts.wall_width,
+                pt.x as u16 * cell_width + opts.wall_width,
+                opts.passage_width,
+                cell_width,
+            ),
+            Direction::West => (
+                pt.y as u16 * cell_width + opts.wall_width,
+                pt.x as u16 * cell_width + 0,
+                cell_width,
+                opts.passage_width,
+            ),
+            _ => todo!("Diagonal travel is not supported yet"),
+        }
+    };
+
     for action in history {
         let (pt, dir, cell_filling) = match action {
-            MazeAction::Add(pt, dir) => (pt, dir, &connected_cell),
-            MazeAction::Remove(pt, dir) => (pt, dir, &blank_cell),
+            &MazeAction::Add(pt, dir) => (pt, dir, &connected_cell),
+            &MazeAction::Remove(pt, dir) => (pt, dir, &blank_cell),
         };
         let mut frame = Frame::default();
         frame.delay = ani_opts.frame_time;
 
         // set dimensions and position of frame
-        match dir {
-            Direction::NoDir => {
-                frame.width = opts.passage_width;
-                frame.height = opts.passage_width;
-                frame.top = pt.y as u16 * cell_width + opts.wall_width;
-                frame.left = pt.x as u16 * cell_width + opts.wall_width;
-            }
-            Direction::North => {
-                frame.width = opts.passage_width;
-                frame.height = cell_width;
-                frame.top = pt.y as u16 * cell_width + 0;
-                frame.left = pt.x as u16 * cell_width + opts.wall_width;
-            }
-            Direction::East => {
-                frame.width = cell_width;
-                frame.height = opts.passage_width;
-                frame.top = pt.y as u16 * cell_width + opts.wall_width;
-                frame.left = pt.x as u16 * cell_width + opts.wall_width;
-            }
-            Direction::South => {
-                frame.width = opts.passage_width;
-                frame.height = cell_width;
-                frame.top = pt.y as u16 * cell_width + opts.wall_width;
-                frame.left = pt.x as u16 * cell_width + opts.wall_width;
-            }
-            Direction::West => {
-                frame.width = cell_width;
-                frame.height = opts.passage_width;
-                frame.top = pt.y as u16 * cell_width + opts.wall_width;
-                frame.left = pt.x as u16 * cell_width + 0;
-            }
-            _ => todo!("Diagonal travel is not supported yet"),
-        }
+        (frame.top, frame.left, frame.width, frame.height) = get_bounds(pt, dir);
 
         frame.buffer = Cow::Borrowed(cell_filling);
         frame.dispose = DisposalMethod::Keep;
         encoder.write_frame(&frame).unwrap();
+
+        if !maze.contains(pt.travel(dir)) {
+            (frame.top, frame.left, frame.width, frame.height) = get_bounds(
+                pt.travel_wrapped(dir, maze.width, maze.height),
+                dir.opposite(),
+            );
+            frame.buffer = Cow::Borrowed(cell_filling);
+            frame.dispose = DisposalMethod::Keep;
+            encoder.write_frame(&frame).unwrap();
+        }
     }
 
     // final empty frame with a higher delay
