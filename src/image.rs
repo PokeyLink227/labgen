@@ -17,6 +17,48 @@ pub struct AnimationOptions {
     pub batch_size: u16,
 }
 
+fn get_bounds(
+    pt: Point,
+    dir: Direction,
+    cell_width: u16,
+    passage_width: u16,
+    wall_width: u16,
+) -> (u16, u16, u16, u16) {
+    match dir {
+        Direction::NoDir => (
+            pt.y as u16 * cell_width + wall_width,
+            pt.x as u16 * cell_width + wall_width,
+            passage_width,
+            passage_width,
+        ),
+        Direction::North => (
+            pt.y as u16 * cell_width + 0,
+            pt.x as u16 * cell_width + wall_width,
+            passage_width,
+            cell_width,
+        ),
+        Direction::East => (
+            pt.y as u16 * cell_width + wall_width,
+            pt.x as u16 * cell_width + wall_width,
+            cell_width,
+            passage_width,
+        ),
+        Direction::South => (
+            pt.y as u16 * cell_width + wall_width,
+            pt.x as u16 * cell_width + wall_width,
+            passage_width,
+            cell_width,
+        ),
+        Direction::West => (
+            pt.y as u16 * cell_width + wall_width,
+            pt.x as u16 * cell_width + 0,
+            cell_width,
+            passage_width,
+        ),
+        _ => todo!("Diagonal travel is not supported yet"),
+    }
+}
+
 pub fn generate_gif(
     maze: &Grid,
     history: &[MazeAction],
@@ -51,42 +93,6 @@ pub fn generate_gif(
         }
     }
 
-    let get_bounds = |pt: Point, dir: Direction| -> (u16, u16, u16, u16) {
-        match dir {
-            Direction::NoDir => (
-                pt.y as u16 * cell_width + opts.wall_width,
-                pt.x as u16 * cell_width + opts.wall_width,
-                opts.passage_width,
-                opts.passage_width,
-            ),
-            Direction::North => (
-                pt.y as u16 * cell_width + 0,
-                pt.x as u16 * cell_width + opts.wall_width,
-                opts.passage_width,
-                cell_width,
-            ),
-            Direction::East => (
-                pt.y as u16 * cell_width + opts.wall_width,
-                pt.x as u16 * cell_width + opts.wall_width,
-                cell_width,
-                opts.passage_width,
-            ),
-            Direction::South => (
-                pt.y as u16 * cell_width + opts.wall_width,
-                pt.x as u16 * cell_width + opts.wall_width,
-                opts.passage_width,
-                cell_width,
-            ),
-            Direction::West => (
-                pt.y as u16 * cell_width + opts.wall_width,
-                pt.x as u16 * cell_width + 0,
-                cell_width,
-                opts.passage_width,
-            ),
-            _ => todo!("Diagonal travel is not supported yet"),
-        }
-    };
-
     let mut frame_num = 0;
     for action in history {
         frame_num += 1;
@@ -94,7 +100,8 @@ pub fn generate_gif(
             &MazeAction::Add(pt, dir) => (pt, dir, 1),
             &MazeAction::Remove(pt, dir) => (pt, dir, 0),
         };
-        let (area_top, area_left, area_width, area_height) = get_bounds(pt, dir);
+        let (area_top, area_left, area_width, area_height) =
+            get_bounds(pt, dir, cell_width, opts.passage_width, opts.wall_width);
 
         for y in area_top..(area_top + area_height) {
             for x in area_left..(area_left + area_width) {
@@ -106,6 +113,9 @@ pub fn generate_gif(
             let (area_top, area_left, area_width, area_height) = get_bounds(
                 pt.travel_wrapped(dir, maze.width, maze.height),
                 dir.opposite(),
+                cell_width,
+                opts.passage_width,
+                opts.wall_width,
             );
 
             for y in area_top..(area_top + area_height) {
@@ -181,42 +191,6 @@ pub fn generate_gif_compressed(
         encoder.write_frame(&frame).unwrap();
     }
 
-    let get_bounds = |pt: Point, dir: Direction| -> (u16, u16, u16, u16) {
-        match dir {
-            Direction::NoDir => (
-                pt.y as u16 * cell_width + opts.wall_width,
-                pt.x as u16 * cell_width + opts.wall_width,
-                opts.passage_width,
-                opts.passage_width,
-            ),
-            Direction::North => (
-                pt.y as u16 * cell_width + 0,
-                pt.x as u16 * cell_width + opts.wall_width,
-                opts.passage_width,
-                cell_width,
-            ),
-            Direction::East => (
-                pt.y as u16 * cell_width + opts.wall_width,
-                pt.x as u16 * cell_width + opts.wall_width,
-                cell_width,
-                opts.passage_width,
-            ),
-            Direction::South => (
-                pt.y as u16 * cell_width + opts.wall_width,
-                pt.x as u16 * cell_width + opts.wall_width,
-                opts.passage_width,
-                cell_width,
-            ),
-            Direction::West => (
-                pt.y as u16 * cell_width + opts.wall_width,
-                pt.x as u16 * cell_width + 0,
-                cell_width,
-                opts.passage_width,
-            ),
-            _ => todo!("Diagonal travel is not supported yet"),
-        }
-    };
-
     for action in history {
         let (pt, dir, cell_filling) = match action {
             &MazeAction::Add(pt, dir) => (pt, dir, &connected_cell),
@@ -226,7 +200,8 @@ pub fn generate_gif_compressed(
         frame.delay = ani_opts.frame_time;
 
         // set dimensions and position of frame
-        (frame.top, frame.left, frame.width, frame.height) = get_bounds(pt, dir);
+        (frame.top, frame.left, frame.width, frame.height) =
+            get_bounds(pt, dir, cell_width, opts.passage_width, opts.wall_width);
 
         frame.buffer = Cow::Borrowed(cell_filling);
         frame.dispose = DisposalMethod::Keep;
@@ -236,6 +211,9 @@ pub fn generate_gif_compressed(
             (frame.top, frame.left, frame.width, frame.height) = get_bounds(
                 pt.travel_wrapped(dir, maze.width, maze.height),
                 dir.opposite(),
+                cell_width,
+                opts.passage_width,
+                opts.wall_width,
             );
             frame.buffer = Cow::Borrowed(cell_filling);
             frame.dispose = DisposalMethod::Keep;
