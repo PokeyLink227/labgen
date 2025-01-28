@@ -1,3 +1,6 @@
+## Examples
+![compressed gif example](examples/example.gif)
+
 
 ## Feature descriptions
 - Wrapping
