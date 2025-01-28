@@ -1,5 +1,5 @@
 ## Examples
-![compressed gif example](examples/example.gif)
+![compressed gif example](examples/example.gif "Kruskals Compressed Gif")
 
 
 ## Feature descriptions
