@@ -51,56 +51,67 @@ pub fn generate_gif(
         }
     }
 
-    let mut frame_num = 0;
-    for action in history {
-        let (pt, dir, cell_filling) = match action {
-            MazeAction::Add(pt, dir) => (pt, dir, 1),
-            MazeAction::Remove(pt, dir) => (pt, dir, 0),
-        };
-        let area_top: u16;
-        let area_left: u16;
-        let area_width: u16;
-        let area_height: u16;
-
-        frame_num += 1;
-
+    let get_bounds = |pt: Point, dir: Direction| -> (u16, u16, u16, u16) {
         match dir {
-            Direction::NoDir => {
-                area_width = opts.passage_width;
-                area_height = opts.passage_width;
-                area_top = pt.y as u16 * cell_width + opts.wall_width;
-                area_left = pt.x as u16 * cell_width + opts.wall_width;
-            }
-            Direction::North => {
-                area_width = opts.passage_width;
-                area_height = cell_width;
-                area_top = pt.y as u16 * cell_width + 0;
-                area_left = pt.x as u16 * cell_width + opts.wall_width;
-            }
-            Direction::East => {
-                area_width = cell_width;
-                area_height = opts.passage_width;
-                area_top = pt.y as u16 * cell_width + opts.wall_width;
-                area_left = pt.x as u16 * cell_width + opts.wall_width;
-            }
-            Direction::South => {
-                area_width = opts.passage_width;
-                area_height = cell_width;
-                area_top = pt.y as u16 * cell_width + opts.wall_width;
-                area_left = pt.x as u16 * cell_width + opts.wall_width;
-            }
-            Direction::West => {
-                area_width = cell_width;
-                area_height = opts.passage_width;
-                area_top = pt.y as u16 * cell_width + opts.wall_width;
-                area_left = pt.x as u16 * cell_width + 0;
-            }
+            Direction::NoDir => (
+                pt.y as u16 * cell_width + opts.wall_width,
+                pt.x as u16 * cell_width + opts.wall_width,
+                opts.passage_width,
+                opts.passage_width,
+            ),
+            Direction::North => (
+                pt.y as u16 * cell_width + 0,
+                pt.x as u16 * cell_width + opts.wall_width,
+                opts.passage_width,
+                cell_width,
+            ),
+            Direction::East => (
+                pt.y as u16 * cell_width + opts.wall_width,
+                pt.x as u16 * cell_width + opts.wall_width,
+                cell_width,
+                opts.passage_width,
+            ),
+            Direction::South => (
+                pt.y as u16 * cell_width + opts.wall_width,
+                pt.x as u16 * cell_width + opts.wall_width,
+                opts.passage_width,
+                cell_width,
+            ),
+            Direction::West => (
+                pt.y as u16 * cell_width + opts.wall_width,
+                pt.x as u16 * cell_width + 0,
+                cell_width,
+                opts.passage_width,
+            ),
             _ => todo!("Diagonal travel is not supported yet"),
         }
+    };
+
+    let mut frame_num = 0;
+    for action in history {
+        frame_num += 1;
+        let (pt, dir, cell_filling) = match action {
+            &MazeAction::Add(pt, dir) => (pt, dir, 1),
+            &MazeAction::Remove(pt, dir) => (pt, dir, 0),
+        };
+        let (area_top, area_left, area_width, area_height) = get_bounds(pt, dir);
 
         for y in area_top..(area_top + area_height) {
             for x in area_left..(area_left + area_width) {
                 state[x as usize + (y as usize * width as usize)] = cell_filling;
+            }
+        }
+
+        if !maze.contains(pt.travel(dir)) {
+            let (area_top, area_left, area_width, area_height) = get_bounds(
+                pt.travel_wrapped(dir, maze.width, maze.height),
+                dir.opposite(),
+            );
+
+            for y in area_top..(area_top + area_height) {
+                for x in area_left..(area_left + area_width) {
+                    state[x as usize + (y as usize * width as usize)] = cell_filling;
+                }
             }
         }
 

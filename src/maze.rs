@@ -219,6 +219,7 @@ pub struct Edge(Point, Direction);
 pub enum MazeAction {
     Add(Point, Direction),
     Remove(Point, Direction),
+    //AddUnwrapped(Point, Direction),
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -665,7 +666,7 @@ fn create_maze_backtrack(
 
     maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
     stack.push(pos);
-    history.push(MazeAction::Add(pos, Direction::NoDir.into()));
+    history.push(MazeAction::Add(pos, Direction::NoDir));
 
     while !stack.is_empty() {
         pos = *stack.last().unwrap();

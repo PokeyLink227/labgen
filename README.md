@@ -29,7 +29,7 @@
 |  Image Type | Animation | Batching | Wrapping | Exclusions | Rooms |
 |-------------|-----------|----------|----------|------------|-------|
 | png            | ❌ | ❌ | ✅ | ✅ | ✅ |
-| gif            | ✅ | ✅ | ❌ | ✅ | ✅ |
+| gif            | ✅ | ✅ | ✅ | ✅ | ✅ |
 | gif-compressed | ✅ | ❌ | ❌ | ✅ | ✅ |
 
 ### Known Issues
