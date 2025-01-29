@@ -30,11 +30,11 @@
 | wilsons      | ✅ | ✅ | ✅ |
 | kruskal      | ✅ | ✅ | ✅ |
 
-|  Image Type | Animation | Batching | Wrapping | Exclusions | Rooms |
-|-------------|-----------|----------|----------|------------|-------|
-| png            | ❌ | ❌ | ✅ | ✅ | ✅ |
-| gif            | ✅ | ✅ | ✅ | ✅ | ✅ |
-| gif-compressed | ✅ | ❌ | ✅ | ✅ | ✅ |
+|  Image Type | Animation | Batching | Wrapping | Exclusions | Rooms | Temporary Cells |
+|-------------|-----------|----------|----------|------------|-------|---------|
+| png            | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ |
+| gif            | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| gif-compressed | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ |
 
 ### Known Issues
 
