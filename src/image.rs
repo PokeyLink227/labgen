@@ -62,6 +62,43 @@ fn get_bounds(
     }
 }
 
+fn get_edge_bounds(
+    pt: Point,
+    dir: Direction,
+    cell_width: u16,
+    passage_width: u16,
+    wall_width: u16,
+) -> (u16, u16, u16, u16) {
+    match dir {
+        Direction::NoDir => panic!("Cant remove edge in NoDir"),
+        Direction::North => (
+            pt.y as u16 * cell_width + 0,
+            pt.x as u16 * cell_width + wall_width,
+            passage_width,
+            wall_width,
+        ),
+        Direction::East => (
+            pt.y as u16 * cell_width + wall_width,
+            pt.x as u16 * cell_width + cell_width,
+            wall_width,
+            passage_width,
+        ),
+        Direction::South => (
+            pt.y as u16 * cell_width + cell_width,
+            pt.x as u16 * cell_width + wall_width,
+            passage_width,
+            wall_width,
+        ),
+        Direction::West => (
+            pt.y as u16 * cell_width + wall_width,
+            pt.x as u16 * cell_width + 0,
+            wall_width,
+            passage_width,
+        ),
+        _ => todo!("Diagonal travel is not supported yet"),
+    }
+}
+
 pub fn generate_gif(
     maze: &Grid,
     history: &[MazeAction],
@@ -113,7 +150,40 @@ pub fn generate_gif(
                 frame_num += 1;
             }
             &MazeAction::RemoveEdge(p, d) => {
+
+                if d == Direction::NoDir {
+                    continue;
+                }
+
                 (pt, dir, cell_filling) = (p, d, 0);
+
+                let (area_top, area_left, area_width, area_height) =
+                    get_edge_bounds(pt, dir, cell_width, opts.passage_width, opts.wall_width);
+
+                for y in area_top..(area_top + area_height) {
+                    for x in area_left..(area_left + area_width) {
+                        state[x as usize + (y as usize * width as usize)] = cell_filling;
+                    }
+                }
+
+                if !maze.contains(pt.travel(dir)) {
+                    let (area_top, area_left, area_width, area_height) = get_edge_bounds(
+                        pt.travel_wrapped(dir, maze.width, maze.height),
+                        dir.opposite(),
+                        cell_width,
+                        opts.passage_width,
+                        opts.wall_width,
+                    );
+
+                    for y in area_top..(area_top + area_height) {
+                        for x in area_left..(area_left + area_width) {
+                            state[x as usize + (y as usize * width as usize)] = cell_filling;
+                        }
+                    }
+                }
+
+
+                skip_draw = true;
                 frame_num += 1;
             }
             &MazeAction::AddTemp(p, d) => {

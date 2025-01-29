@@ -37,16 +37,22 @@ impl MazeHistory {
     pub fn carve(&mut self, new: Point, from_direction: Direction) {
         if !self.temp_cells.is_empty() {
             self.actions.push(MazeAction::StartFrame);
+
             let mut i = 0;
             while i < self.temp_cells.len() {
                 if self.temp_cells[i].0 == new {
                     self.actions
                         .push(MazeAction::Remove(new, self.temp_cells[i].1));
                     self.temp_cells.swap_remove(i);
+                } else if self.temp_cells[i].0.travel(self.temp_cells[i].1) == new {
+                    self.actions.push(MazeAction::RemoveEdge(self.temp_cells[i].0, self.temp_cells[i].1));
+                    self.temp_cells[i].1 = Direction::NoDir;
+                    i += 1;
                 } else {
                     i += 1;
                 }
             }
+
             self.actions.push(MazeAction::Add(new, from_direction));
             self.actions.push(MazeAction::EndFrame);
         } else {
@@ -74,7 +80,7 @@ impl MazeHistory {
     pub fn remove_temp_cells(&mut self) {
         self.actions.push(MazeAction::StartFrame);
         for edge in self.temp_cells.drain(..) {
-            self.actions.push(MazeAction::RemoveEdge(edge.0, edge.1));
+            self.actions.push(MazeAction::Remove(edge.0, edge.1));
         }
         self.actions.push(MazeAction::EndFrame);
     }

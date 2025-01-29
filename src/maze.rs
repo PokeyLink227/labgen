@@ -963,7 +963,7 @@ fn create_maze_wilson(
 
             let dir = Direction::from_clock_cardinal(next.0 as u8);
             maze.get_tile_mut(pos).set_connected(dir);
-            history.carve_temp(pos, Direction::NoDir);
+            history.carve_temp(pos, dir);
             pos = next.1;
         }
 
