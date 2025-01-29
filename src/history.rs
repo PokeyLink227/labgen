@@ -16,6 +16,7 @@ pub struct MazeHistory {
     actions: Vec<MazeAction>,
     temp_cells: Vec<(Point, Direction)>,
     wrap: Option<MazeWrap>,
+    log_temps: bool,
 }
 
 impl MazeHistory {
@@ -28,6 +29,10 @@ impl MazeHistory {
             actions: Vec::with_capacity(size),
             ..Self::default()
         }
+    }
+
+    pub fn enable_temp_cells(&mut self) {
+        self.log_temps = true;
     }
 
     pub fn get_actions(&self) -> &[MazeAction] {
@@ -73,6 +78,10 @@ impl MazeHistory {
     }
 
     pub fn carve_temp(&mut self, new: Point, from_direction: Direction) {
+        if !self.log_temps {
+            return;
+        }
+
         self.actions.push(MazeAction::AddTemp(new, from_direction));
         self.temp_cells.push((new, from_direction));
     }

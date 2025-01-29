@@ -312,6 +312,7 @@ pub fn generate_maze(
     rooms: &[Rect],
     exclusions: &[Rect],
     uncarve_percent: u8,
+    log_temps: bool,
     rng: &mut impl Rng,
 ) -> (Grid, MazeHistory) {
     let mut maze: Grid = Grid {
@@ -468,6 +469,9 @@ pub fn generate_maze(
 
     // generate maze
     let mut history = MazeHistory::with_size_hint(maze.tiles.len());
+    if log_temps {
+        history.enable_temp_cells();
+    }
     match mtype {
         MazeType::Backtrack => {
             for region in region_slices {

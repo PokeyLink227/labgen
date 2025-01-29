@@ -84,6 +84,10 @@ struct Args {
         value_parser = clap::value_parser!(u8).range(0..100),
     )]
     uncarve_percent: u8,
+
+    /// include temporary cells in animated maze
+    #[arg(long = "tempcells", default_value = "false")]
+    log_temps: bool,
 }
 
 fn main() {
@@ -106,6 +110,7 @@ fn main() {
         &rooms,
         &exclude,
         args.uncarve_percent,
+        args.log_temps && args.animate,
         &mut rng,
     );
     let maze_time = now.elapsed();
