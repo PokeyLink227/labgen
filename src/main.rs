@@ -1,6 +1,9 @@
 use crate::{
     image::{generate_gif, generate_gif_compressed, generate_png, AnimationOptions, ImageOptions},
-    maze::{generate_maze, MazeType, MazeWrap, Rect},
+    maze::{generate_maze, MazeType, MazeWrap},
+    grid::{
+        Rect,
+    },
 };
 use clap::Parser;
 use rand::{rngs::StdRng, SeedableRng};
@@ -9,6 +12,7 @@ use std::time::Instant;
 mod history;
 mod image;
 mod maze;
+mod grid;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]

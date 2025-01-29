@@ -1,6 +1,8 @@
 use crate::{
     history::MazeAction,
-    maze::{ConnectionStatus, Direction, Grid, Point, Rect},
+    grid::{
+        Point, Grid, Direction, Rect, ConnectionStatus,
+    },
 };
 use gif::{DisposalMethod, Encoder, Frame, Repeat};
 use std::{borrow::Cow, fs::File, io::BufWriter};

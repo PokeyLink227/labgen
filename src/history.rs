@@ -1,10 +1,14 @@
-use crate::maze::{Direction, MazeWrap, Point};
+use crate::maze::{MazeWrap};
+use crate::grid::{
+    Point, Tile, Grid, Direction, Rect, ConnectionStatus,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MazeAction {
     Add(Point, Direction),
     Remove(Point, Direction),
     RemoveEdge(Point, Direction),
+    //AddEdge(Point, Direction),
     AddTemp(Point, Direction),
     StartFrame,
     EndFrame,
