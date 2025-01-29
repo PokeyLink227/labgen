@@ -1,11 +1,11 @@
 (maze)
+add SVG and mp4 support
 add regions that get connected at the end only?
 add ellers and growing forest - for sure second one
 sparse mazes
 2.5d mazes
 improve history possibly with an enum to support
     - temp cells in maze
-    - uncarving cells
     - backtracking
 3d mazes (would need gui to make effectively maybe bevy + egui?) (or egui + wgpu) (iced)
 wrapping rooms
