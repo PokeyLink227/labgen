@@ -11,23 +11,33 @@ pub enum MazeAction {
     //AddUnwrapped(Point, Direction),
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct MazeHistory {
     actions: Vec<MazeAction>,
     temp_cells: Vec<(Point, Direction)>,
-    wrap: Option<MazeWrap>,
+    maze_width: u16,
+    maze_height: u16,
     log_temps: bool,
 }
 
 impl MazeHistory {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(w: u16, h: u16, temps: bool) -> Self {
+        Self {
+            actions: Vec::new(),
+            temp_cells: Vec::new(),
+            maze_width: w,
+            maze_height: h,
+            log_temps: temps,
+        }
     }
 
-    pub fn with_size_hint(size: usize) -> Self {
+    pub fn with_size_hint(w: u16, h: u16, temps: bool, size: usize) -> Self {
         Self {
             actions: Vec::with_capacity(size),
-            ..Self::default()
+            temp_cells: Vec::new(),
+            maze_width: w,
+            maze_height: h,
+            log_temps: temps,
         }
     }
 
@@ -49,7 +59,7 @@ impl MazeHistory {
                     self.actions
                         .push(MazeAction::Remove(new, self.temp_cells[i].1));
                     self.temp_cells.swap_remove(i);
-                } else if self.temp_cells[i].0.travel(self.temp_cells[i].1) == new {
+                } else if self.temp_cells[i].0.travel_wrapped(self.temp_cells[i].1, self.maze_width, self.maze_height) == new {
                     self.actions.push(MazeAction::RemoveEdge(self.temp_cells[i].0, self.temp_cells[i].1));
                     self.temp_cells[i].1 = Direction::NoDir;
                     i += 1;

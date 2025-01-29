@@ -40,3 +40,4 @@
 
 - binary tree mazes with rooms or exclusions will develop isolated regions
 - animations generated with wrapping will only render one side of the passage when wrapping around the edge
+- temp cells do not work with wrapping

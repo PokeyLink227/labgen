@@ -429,7 +429,7 @@ pub fn generate_maze(
     // early return to ensure maze algos always recieve a maze with at least
     // 1 unvisited cell
     if num_unvisited < 1 {
-        return (maze, MazeHistory::default());
+        return (maze, MazeHistory::new(width, height, log_temps));
     }
 
     // holds a list of index-region tuples of unvisited cells
@@ -468,10 +468,7 @@ pub fn generate_maze(
     region_slices.push(&open_tiles[start_index..sorted_region_map.len()]);
 
     // generate maze
-    let mut history = MazeHistory::with_size_hint(maze.tiles.len());
-    if log_temps {
-        history.enable_temp_cells();
-    }
+    let mut history = MazeHistory::with_size_hint(width, height, log_temps, maze.tiles.len());
     match mtype {
         MazeType::Backtrack => {
             for region in region_slices {
