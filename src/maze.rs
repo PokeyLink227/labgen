@@ -963,8 +963,8 @@ fn create_maze_wilson(
 
             let dir = Direction::from_clock_cardinal(next.0 as u8);
             maze.get_tile_mut(pos).set_connected(dir);
+            history.carve_temp(pos, Direction::NoDir);
             pos = next.1;
-            //history.push(MazeAction::AddTemp(pos, dir.opposite()));
         }
 
         // carve the final path into the maze
@@ -985,6 +985,8 @@ fn create_maze_wilson(
             }
         }
         maze.get_tile_mut(pos).connect(dir.opposite());
+
+        history.remove_temp_cells();
     }
 }
 
@@ -1111,7 +1113,7 @@ fn create_maze_prim_true(
     .filter(|&(_, p)| maze.contains(p) && maze.get_tile(p).carveable())
     .for_each(|(i, p)| {
         open.push((p, Direction::from_clock_cardinal(i as u8).opposite()));
-        //history.push(MazeAction::AddTemp(p, Direction::NoDir));
+        history.carve_temp(p, Direction::from_clock_cardinal(i as u8).opposite());
     });
 
     while !open.is_empty() {
@@ -1141,7 +1143,7 @@ fn create_maze_prim_true(
         .filter(|&(_, p)| maze.contains(p) && maze.get_tile(p).carveable())
         .for_each(|(i, p)| {
             open.push((p, Direction::from_clock_cardinal(i as u8).opposite()));
-            //history.push(MazeAction::AddTemp(p, Direction::NoDir));
+            history.carve_temp(p, Direction::from_clock_cardinal(i as u8).opposite());
         });
     }
 }

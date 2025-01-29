@@ -4,14 +4,17 @@ use crate::maze::{Direction, MazeWrap, Point};
 pub enum MazeAction {
     Add(Point, Direction),
     Remove(Point, Direction),
+    RemoveEdge(Point, Direction),
     AddTemp(Point, Direction),
+    StartFrame,
+    EndFrame,
     //AddUnwrapped(Point, Direction),
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct MazeHistory {
     actions: Vec<MazeAction>,
-    temp_cells: Vec<Point>,
+    temp_cells: Vec<(Point, Direction)>,
     wrap: Option<MazeWrap>,
 }
 
@@ -32,11 +35,27 @@ impl MazeHistory {
     }
 
     pub fn carve(&mut self, new: Point, from_direction: Direction) {
-        self.actions.push(MazeAction::Add(new, from_direction));
+        if !self.temp_cells.is_empty() {
+            self.actions.push(MazeAction::StartFrame);
+            let mut i = 0;
+            while i < self.temp_cells.len() {
+                if self.temp_cells[i].0 == new {
+                    self.actions
+                        .push(MazeAction::Remove(new, self.temp_cells[i].1));
+                    self.temp_cells.swap_remove(i);
+                } else {
+                    i += 1;
+                }
+            }
+            self.actions.push(MazeAction::Add(new, from_direction));
+            self.actions.push(MazeAction::EndFrame);
+        } else {
+            self.actions.push(MazeAction::Add(new, from_direction));
+        }
     }
 
     pub fn add_cell(&mut self, new: Point) {
-        self.actions.push(MazeAction::Add(new, Direction::NoDir));
+        self.carve(new, Direction::NoDir);
     }
 
     pub fn uncarve(&mut self, pt: Point, direction: Direction) {
@@ -45,5 +64,18 @@ impl MazeHistory {
 
     pub fn remove_cell(&mut self, new: Point) {
         self.actions.push(MazeAction::Remove(new, Direction::NoDir));
+    }
+
+    pub fn carve_temp(&mut self, new: Point, from_direction: Direction) {
+        self.actions.push(MazeAction::AddTemp(new, from_direction));
+        self.temp_cells.push((new, from_direction));
+    }
+
+    pub fn remove_temp_cells(&mut self) {
+        self.actions.push(MazeAction::StartFrame);
+        for edge in self.temp_cells.drain(..) {
+            self.actions.push(MazeAction::RemoveEdge(edge.0, edge.1));
+        }
+        self.actions.push(MazeAction::EndFrame);
     }
 }
