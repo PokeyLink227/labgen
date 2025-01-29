@@ -10,8 +10,7 @@ improve history possibly with an enum to support
 3d mazes (would need gui to make effectively maybe bevy + egui?) (or egui + wgpu) (iced)
 wrapping rooms
 user-defined textures for cell-types
-
-FIX WRAPPING NOT FULLY DISPLAYING FOR ANIMATION
+pass algo a function to use for finding adjacant tiles
 
 
 instead of flood fill

@@ -6,6 +6,7 @@ use clap::Parser;
 use rand::{rngs::StdRng, SeedableRng};
 use std::time::Instant;
 
+mod history;
 mod image;
 mod maze;
 
@@ -114,7 +115,7 @@ fn main() {
         file_path: args.file_path,
         passage_width: args.passage_width,
         wall_width: args.wall_width,
-        color_map: [0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF],
+        color_map: [0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0x80, 0x80, 0x80],
     };
     let ani_opts = AnimationOptions {
         frame_time: args.frame_time,
@@ -124,9 +125,9 @@ fn main() {
 
     if args.animate {
         if args.compress {
-            generate_gif_compressed(&nodes, &hist, &rooms, &opts, &ani_opts);
+            generate_gif_compressed(&nodes, hist.get_actions(), &rooms, &opts, &ani_opts);
         } else {
-            generate_gif(&nodes, &hist, &rooms, &opts, &ani_opts);
+            generate_gif(&nodes, hist.get_actions(), &rooms, &opts, &ani_opts);
         }
     } else {
         generate_png(&nodes, &opts);

@@ -1,4 +1,7 @@
-use crate::maze::{ConnectionStatus, Direction, Grid, MazeAction, Point, Rect};
+use crate::{
+    history::MazeAction,
+    maze::{ConnectionStatus, Direction, Grid, Point, Rect},
+};
 use gif::{DisposalMethod, Encoder, Frame, Repeat};
 use std::{borrow::Cow, fs::File, io::BufWriter};
 
@@ -7,7 +10,7 @@ pub struct ImageOptions {
     pub file_path: String,
     pub passage_width: u16,
     pub wall_width: u16,
-    pub color_map: [u8; 6],
+    pub color_map: [u8; 9],
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -99,6 +102,7 @@ pub fn generate_gif(
         let (pt, dir, cell_filling) = match action {
             &MazeAction::Add(pt, dir) => (pt, dir, 1),
             &MazeAction::Remove(pt, dir) => (pt, dir, 0),
+            &MazeAction::AddTemp(pt, dir) => (pt, dir, 2),
         };
         let (area_top, area_left, area_width, area_height) =
             get_bounds(pt, dir, cell_width, opts.passage_width, opts.wall_width);
@@ -195,6 +199,7 @@ pub fn generate_gif_compressed(
         let (pt, dir, cell_filling) = match action {
             &MazeAction::Add(pt, dir) => (pt, dir, &connected_cell),
             &MazeAction::Remove(pt, dir) => (pt, dir, &blank_cell),
+            _ => todo!(),
         };
         let mut frame = Frame::default();
         frame.delay = ani_opts.frame_time;
