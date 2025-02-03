@@ -1,6 +1,4 @@
-use crate::{
-    maze::{MazeWrap},
-};
+use crate::maze::MazeWrap;
 use std::{
     array,
     ops::{Add, AddAssign},
@@ -131,6 +129,7 @@ impl Rect {
 pub enum ConnectionStatus {
     #[default]
     UnVisited,
+    Visited,
     InMaze,
     Removed,
     Room,

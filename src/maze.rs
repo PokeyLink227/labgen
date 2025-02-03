@@ -1,8 +1,6 @@
 use crate::{
+    grid::{ConnectionStatus, Direction, Grid, Point, Rect, Tile},
     history::{MazeAction, MazeHistory},
-    grid::{
-        Point, Tile, Grid, Direction, Rect, ConnectionStatus,
-    },
 };
 use rand::{seq::SliceRandom, Rng};
 use std::{
@@ -21,7 +19,6 @@ impl Vector2<f32> {
         lhs.x * rhs.x + lhs.y * rhs.y
     }
 }
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, clap::ValueEnum)]
 #[repr(u8)]
@@ -49,7 +46,6 @@ pub enum MazeWrap {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Edge(Point, Direction);
-
 
 /*
 fn opposite(src: u8) -> u8 {
@@ -237,6 +233,7 @@ pub fn generate_maze(
                     &mut maze,
                     *region.choose(rng).unwrap(),
                     wrap,
+                    log_temps,
                     &mut history,
                     rng,
                 );
@@ -414,18 +411,23 @@ fn create_maze_backtrack(
     maze: &mut Grid,
     start_pos: Point,
     wrap: Option<MazeWrap>,
+    log_temps: bool,
     history: &mut MazeHistory,
     rng: &mut impl Rng,
 ) {
-    let mut stack: Vec<Point> = Vec::new();
+    let mut stack: Vec<(Point, Direction)> = Vec::new();
     let mut pos = start_pos;
 
-    maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
-    stack.push(pos);
-    history.add_cell(pos);
+    if log_temps {
+        maze.get_tile_mut(pos).status = ConnectionStatus::Visited;
+    } else {
+        maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
+        history.add_cell(pos);
+    }
+    stack.push((pos, Direction::NoDir));
 
     while !stack.is_empty() {
-        pos = *stack.last().unwrap();
+        pos = stack.last().unwrap().0;
 
         let adj = match wrap {
             Some(w) => pos.adjacent_wrapped(w, maze.width, maze.height),
@@ -440,7 +442,12 @@ fn create_maze_backtrack(
 
         match next {
             None => {
-                stack.pop();
+                let (p, d) = stack.pop().unwrap();
+                if log_temps {
+                    // convert temp
+                    maze.get_tile_mut(p).status = ConnectionStatus::InMaze;
+                    history.carve(p, d);
+                }
             }
             Some(next) => {
                 let dir = Direction::from_clock_cardinal(next.0 as u8);
@@ -448,10 +455,16 @@ fn create_maze_backtrack(
 
                 pos = next.1;
                 maze.get_tile_mut(pos).connect(dir.opposite());
-                maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
 
-                stack.push(pos);
-                history.carve(pos, dir.opposite());
+                if log_temps {
+                    maze.get_tile_mut(pos).status = ConnectionStatus::Visited;
+                    history.carve_temp(pos, dir.opposite());
+                } else {
+                    maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
+                    history.carve(pos, dir.opposite());
+                }
+
+                stack.push((pos, dir.opposite()));
             }
         }
     }
