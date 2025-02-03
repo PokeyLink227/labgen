@@ -1,7 +1,5 @@
-use crate::maze::{MazeWrap};
-use crate::grid::{
-    Point, Tile, Grid, Direction, Rect, ConnectionStatus,
-};
+use crate::grid::{ConnectionStatus, Direction, Grid, Point, Rect, Tile};
+use crate::maze::MazeWrap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MazeAction {
@@ -10,6 +8,7 @@ pub enum MazeAction {
     RemoveEdge(Point, Direction),
     //AddEdge(Point, Direction),
     AddTemp(Point, Direction),
+    AddMarker(Point),
     StartFrame,
     EndFrame,
     //AddUnwrapped(Point, Direction),
@@ -22,6 +21,7 @@ pub struct MazeHistory {
     maze_width: u16,
     maze_height: u16,
     log_temps: bool,
+    marker_pos: Point,
 }
 
 impl MazeHistory {
@@ -32,6 +32,7 @@ impl MazeHistory {
             maze_width: w,
             maze_height: h,
             log_temps: temps,
+            marker_pos: Point::new(0, 0),
         }
     }
 
@@ -42,6 +43,7 @@ impl MazeHistory {
             maze_width: w,
             maze_height: h,
             log_temps: temps,
+            marker_pos: Point::new(0, 0),
         }
     }
 
@@ -63,8 +65,16 @@ impl MazeHistory {
                     self.actions
                         .push(MazeAction::Remove(new, self.temp_cells[i].1));
                     self.temp_cells.swap_remove(i);
-                } else if self.temp_cells[i].0.travel_wrapped(self.temp_cells[i].1, self.maze_width, self.maze_height) == new {
-                    self.actions.push(MazeAction::RemoveEdge(self.temp_cells[i].0, self.temp_cells[i].1));
+                } else if self.temp_cells[i].0.travel_wrapped(
+                    self.temp_cells[i].1,
+                    self.maze_width,
+                    self.maze_height,
+                ) == new
+                {
+                    self.actions.push(MazeAction::RemoveEdge(
+                        self.temp_cells[i].0,
+                        self.temp_cells[i].1,
+                    ));
                     self.temp_cells[i].1 = Direction::NoDir;
                     i += 1;
                 } else {
@@ -106,5 +116,48 @@ impl MazeHistory {
             self.actions.push(MazeAction::Remove(edge.0, edge.1));
         }
         self.actions.push(MazeAction::EndFrame);
+    }
+
+    pub fn place_marker(&mut self, pos: Point) {
+        self.marker_pos = pos;
+        self.actions.push(MazeAction::AddMarker(pos));
+    }
+
+    pub fn replace_marker(&mut self, pos: Point) {
+        self.actions.push(MazeAction::StartFrame);
+        self.actions.push(MazeAction::Add(pos, Direction::NoDir));
+        self.marker_pos = pos;
+        self.actions.push(MazeAction::AddMarker(pos));
+        self.actions.push(MazeAction::EndFrame);
+    }
+
+    pub fn replace_marker_temp(&mut self, pos: Point) {
+        self.actions.push(MazeAction::StartFrame);
+        self.actions
+            .push(MazeAction::AddTemp(pos, Direction::NoDir));
+        self.marker_pos = pos;
+        self.actions.push(MazeAction::AddMarker(pos));
+        self.actions.push(MazeAction::EndFrame);
+    }
+
+    pub fn move_marker(&mut self, dir: Direction) {
+        self.actions.push(MazeAction::StartFrame);
+        self.actions.push(MazeAction::Add(self.marker_pos, dir));
+        self.marker_pos = self.marker_pos.travel(dir);
+        self.actions.push(MazeAction::AddMarker(self.marker_pos));
+        self.actions.push(MazeAction::EndFrame);
+    }
+
+    pub fn move_marker_temp(&mut self, dir: Direction) {
+        self.actions.push(MazeAction::StartFrame);
+        self.actions.push(MazeAction::AddTemp(self.marker_pos, dir));
+        self.marker_pos = self.marker_pos.travel(dir);
+        self.actions.push(MazeAction::AddMarker(self.marker_pos));
+        self.actions.push(MazeAction::EndFrame);
+    }
+
+    pub fn remove_marker(&mut self) {
+        self.actions
+            .push(MazeAction::Add(self.marker_pos, Direction::NoDir));
     }
 }

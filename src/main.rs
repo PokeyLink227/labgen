@@ -1,18 +1,16 @@
 use crate::{
+    grid::Rect,
     image::{generate_gif, generate_gif_compressed, generate_png, AnimationOptions, ImageOptions},
     maze::{generate_maze, MazeType, MazeWrap},
-    grid::{
-        Rect,
-    },
 };
 use clap::Parser;
 use rand::{rngs::StdRng, SeedableRng};
 use std::time::Instant;
 
+mod grid;
 mod history;
 mod image;
 mod maze;
-mod grid;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -124,7 +122,9 @@ fn main() {
         file_path: args.file_path,
         passage_width: args.passage_width,
         wall_width: args.wall_width,
-        color_map: [0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0x80, 0x80, 0x80],
+        color_map: [
+            0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0xFF, 0x80, 0x80,
+        ],
     };
     let ani_opts = AnimationOptions {
         frame_time: args.frame_time,

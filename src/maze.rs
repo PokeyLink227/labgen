@@ -420,6 +420,8 @@ fn create_maze_backtrack(
 
     if log_temps {
         maze.get_tile_mut(pos).status = ConnectionStatus::Visited;
+        history.carve_temp(pos, Direction::NoDir);
+        history.place_marker(pos);
     } else {
         maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
         history.add_cell(pos);
@@ -446,7 +448,8 @@ fn create_maze_backtrack(
                 if log_temps {
                     // convert temp
                     maze.get_tile_mut(p).status = ConnectionStatus::InMaze;
-                    history.carve(p, d);
+                    //history.carve(p, d);
+                    history.move_marker(d);
                 }
             }
             Some(next) => {
@@ -458,7 +461,9 @@ fn create_maze_backtrack(
 
                 if log_temps {
                     maze.get_tile_mut(pos).status = ConnectionStatus::Visited;
-                    history.carve_temp(pos, dir.opposite());
+                    // need to add temp tracking to marker code
+                    //history.carve_temp(pos, dir.opposite());
+                    history.move_marker_temp(dir);
                 } else {
                     maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
                     history.carve(pos, dir.opposite());
@@ -468,6 +473,10 @@ fn create_maze_backtrack(
             }
         }
     }
+
+    // try to remove the 1 frame delay before disapearing
+    // it is caused by "moving" the marker to the first cell twice
+    history.remove_marker();
 }
 
 fn create_maze_prim_simple(

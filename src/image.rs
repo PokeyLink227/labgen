@@ -1,8 +1,6 @@
 use crate::{
+    grid::{ConnectionStatus, Direction, Grid, Point, Rect},
     history::MazeAction,
-    grid::{
-        Point, Grid, Direction, Rect, ConnectionStatus,
-    },
 };
 use gif::{DisposalMethod, Encoder, Frame, Repeat};
 use std::{borrow::Cow, fs::File, io::BufWriter};
@@ -12,7 +10,7 @@ pub struct ImageOptions {
     pub file_path: String,
     pub passage_width: u16,
     pub wall_width: u16,
-    pub color_map: [u8; 9],
+    pub color_map: [u8; 12],
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -152,7 +150,6 @@ pub fn generate_gif(
                 frame_num += 1;
             }
             &MazeAction::RemoveEdge(p, d) => {
-
                 if d == Direction::NoDir {
                     continue;
                 }
@@ -184,12 +181,15 @@ pub fn generate_gif(
                     }
                 }
 
-
                 skip_draw = true;
                 frame_num += 1;
             }
             &MazeAction::AddTemp(p, d) => {
                 (pt, dir, cell_filling) = (p, d, 2);
+                frame_num += 1;
+            }
+            &MazeAction::AddMarker(p) => {
+                (pt, dir, cell_filling) = (p, Direction::NoDir, 3);
                 frame_num += 1;
             }
             &MazeAction::StartFrame => {
