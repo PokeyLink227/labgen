@@ -704,6 +704,7 @@ fn create_maze_growingtree(
     }
 }
 
+// TODO: improve the retracing to happen faster/be smoother
 fn create_maze_wilson(
     maze: &mut Grid,
     reservoir: &[Point],
@@ -718,7 +719,11 @@ fn create_maze_wilson(
     let mut anchor: Point = reservoir[reservoir_index];
 
     maze.get_tile_mut(anchor).status = ConnectionStatus::InMaze;
-    history.add_cell(anchor);
+    if log_temps {
+        history.place_marker(anchor);
+    } else {
+        history.add_cell(anchor);
+    }
 
     'outer: loop {
         // pick a cell not already in the maze
@@ -733,7 +738,7 @@ fn create_maze_wilson(
         let mut pos = anchor;
 
         if log_temps {
-            history.place_marker(pos);
+            history.replace_marker(pos);
         }
 
         // start a random loop erased walk from the chosen cell
@@ -784,10 +789,11 @@ fn create_maze_wilson(
         }
         maze.get_tile_mut(pos).connect(dir.opposite());
         if log_temps {
-            history.remove_marker();
+            //history.remove_marker();
             history.remove_temp_cells();
         }
     }
+    history.remove_marker();
 }
 
 // merge_sets 60x faster than simple array and 600x faster with set_lookup_flatten
