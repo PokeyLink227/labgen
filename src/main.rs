@@ -90,6 +90,10 @@ struct Args {
     /// include temporary cells in animated maze
     #[arg(long = "tempcells", default_value = "false")]
     log_temps: bool,
+
+    /// suppress output
+    #[arg(long = "nosave", default_value = "false")]
+    nosave: bool,
 }
 
 fn main() {
@@ -132,14 +136,16 @@ fn main() {
         batch_size: args.batch_size,
     };
 
-    if args.animate {
-        if args.compress {
-            generate_gif_compressed(&nodes, hist.get_actions(), &rooms, &opts, &ani_opts);
+    if !args.nosave {
+        if args.animate {
+            if args.compress {
+                generate_gif_compressed(&nodes, hist.get_actions(), &rooms, &opts, &ani_opts);
+            } else {
+                generate_gif(&nodes, hist.get_actions(), &rooms, &opts, &ani_opts);
+            }
         } else {
-            generate_gif(&nodes, hist.get_actions(), &rooms, &opts, &ani_opts);
+            generate_png(&nodes, &opts);
         }
-    } else {
-        generate_png(&nodes, &opts);
     }
     let image_time = now.elapsed();
 
