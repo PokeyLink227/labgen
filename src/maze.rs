@@ -274,7 +274,7 @@ pub fn generate_maze(
                     );
                     history.add_cell(region[0]);
                 } else {
-                    create_maze_wilson(&mut maze, region, wrap, &mut history, rng);
+                    create_maze_wilson(&mut maze, region, wrap, log_temps, &mut history, rng);
                 }
             }
         }
@@ -708,6 +708,7 @@ fn create_maze_wilson(
     maze: &mut Grid,
     reservoir: &[Point],
     wrap: Option<MazeWrap>,
+    log_temps: bool,
     history: &mut MazeHistory,
     rng: &mut impl Rng,
 ) {
@@ -731,6 +732,10 @@ fn create_maze_wilson(
         }
         let mut pos = anchor;
 
+        if log_temps {
+            history.place_marker(pos);
+        }
+
         // start a random loop erased walk from the chosen cell
         while maze.get_tile(pos).status == ConnectionStatus::UnVisited {
             let adj = match wrap {
@@ -747,13 +752,18 @@ fn create_maze_wilson(
 
             let dir = Direction::from_clock_cardinal(next.0 as u8);
             maze.get_tile_mut(pos).set_connected(dir);
-            history.carve_temp(pos, dir);
+            if log_temps {
+                history.move_marker_temp(dir);
+            }
             pos = next.1;
         }
 
         // carve the final path into the maze
         pos = anchor;
         let mut dir = Direction::NoDir;
+        if log_temps {
+            history.replace_marker(pos);
+        }
         while maze.get_tile(pos).status != ConnectionStatus::InMaze {
             // this line will panic if tile has multiple connections
             let temp_dir = maze.get_tile(pos).connections.into();
@@ -761,7 +771,11 @@ fn create_maze_wilson(
             maze.get_tile_mut(pos).connect(dir.opposite());
             dir = temp_dir;
 
-            history.carve(pos, dir);
+            if log_temps {
+                history.move_marker(dir);
+            } else {
+                history.carve(pos, dir);
+            }
             if wrap.is_some() {
                 pos = pos.travel_wrapped(dir, maze.width, maze.height);
             } else {
@@ -769,8 +783,10 @@ fn create_maze_wilson(
             }
         }
         maze.get_tile_mut(pos).connect(dir.opposite());
-
-        history.remove_temp_cells();
+        if log_temps {
+            history.remove_marker();
+            history.remove_temp_cells();
+        }
     }
 }
 
