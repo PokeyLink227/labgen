@@ -1,7 +1,9 @@
 use crate::maze::MazeWrap;
 use std::{
     array,
+    fmt::Display,
     ops::{Add, AddAssign},
+    str::FromStr,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -25,6 +27,12 @@ impl AddAssign for Point {
     fn add_assign(&mut self, other: Self) {
         self.x += other.x;
         self.y += other.y;
+    }
+}
+
+impl std::fmt::Display for Point {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}, {})", self.x, self.y)
     }
 }
 
