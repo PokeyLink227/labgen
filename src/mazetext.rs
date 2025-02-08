@@ -5,8 +5,10 @@ use std::{cell::LazyCell, fs::File, str::FromStr};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MazeTextError {
     UnsupportedSymbol,
-    BadDimensions,
+    BadFontFileDimensions,
+    FontFileMissing,
     CouldntParseText,
+    MazeTooSmall,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -48,18 +50,23 @@ impl MazeFont {
         let symbol_width = 8;
         let symbol_height = 9;
 
-        let decoder = png::Decoder::new(File::open(file_path).unwrap());
-        let mut reader = decoder.read_info().unwrap();
+        let decoder =
+            png::Decoder::new(File::open(file_path).or(Err(MazeTextError::FontFileMissing))?);
+        let mut reader = decoder
+            .read_info()
+            .or(Err(MazeTextError::FontFileMissing))?;
         let image_info = reader.info();
         let image_width = image_info.width;
         let image_height = image_info.height;
 
         if image_height != symbol_height * 3 || image_width != symbol_width * 32 {
-            return Err(MazeTextError::BadDimensions);
+            return Err(MazeTextError::BadFontFileDimensions);
         }
 
         let mut buf = vec![0; reader.output_buffer_size()];
-        let info = reader.next_frame(&mut buf).unwrap();
+        let info = reader
+            .next_frame(&mut buf)
+            .or(Err(MazeTextError::FontFileMissing))?;
         let bytes = &buf[..info.buffer_size()];
 
         let mut font = MazeFont {
@@ -101,6 +108,10 @@ impl MazeFont {
 
         for c in text.1.chars() {
             let sym = self.get_symbol(c)?;
+
+            if pos.x as u16 + sym.width as u16 >= maze.width {
+                return Err(MazeTextError::MazeTooSmall);
+            }
 
             for y in 0..9 {
                 for x in 0..8 {

@@ -78,10 +78,19 @@ pub fn generate_maze(
     };
 
     if !text.is_empty() {
-        let font = MazeFont::read_font("examples/default_font.png").unwrap();
+        let font = match MazeFont::read_font("examples/default_font.png") {
+            Ok(f) => f,
+            Err(e) => {
+                println!("Error: {:?}", e);
+                return (maze, MazeHistory::new(width, height, log_temps));
+            }
+        };
 
         for t in text {
-            let _ = font.generate_text(*t, &mut maze);
+            if let Err(e) = font.generate_text(*t, &mut maze) {
+                println!("Error: {:?}", e);
+                return (maze, MazeHistory::new(width, height, log_temps));
+            }
         }
     }
 
