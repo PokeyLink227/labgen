@@ -154,8 +154,7 @@ impl FromStr for Rect {
 
         let r = Ok(Rect {
             x: if let Some(f) = fields_iter.next() {
-                println!("i: {}", f);
-                match f.parse() {
+                match f.trim().parse() {
                     Ok(val) => val,
                     Err(_) => return Err(ParseRectError::CouldntParseInt),
                 }
@@ -163,7 +162,7 @@ impl FromStr for Rect {
                 return Err(ParseRectError::NotEnoughFields);
             },
             y: if let Some(f) = fields_iter.next() {
-                match f.parse() {
+                match f.trim().parse() {
                     Ok(val) => val,
                     Err(_) => return Err(ParseRectError::CouldntParseInt),
                 }
@@ -171,7 +170,7 @@ impl FromStr for Rect {
                 return Err(ParseRectError::NotEnoughFields);
             },
             w: if let Some(f) = fields_iter.next() {
-                match f.parse() {
+                match f.trim().parse() {
                     Ok(val) => val,
                     Err(_) => return Err(ParseRectError::CouldntParseInt),
                 }
@@ -179,7 +178,7 @@ impl FromStr for Rect {
                 return Err(ParseRectError::NotEnoughFields);
             },
             h: if let Some(f) = fields_iter.next() {
-                match f.parse() {
+                match f.trim().parse() {
                     Ok(val) => val,
                     Err(_) => return Err(ParseRectError::CouldntParseInt),
                 }
