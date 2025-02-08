@@ -1,7 +1,12 @@
 use crate::grid::{ConnectionStatus, Direction, Grid, Point, Rect, Tile};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct FontSymbol {
+pub enum MazeFontError {
+    UnsupportedSymbol,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FontSymbol {
     pixels: [[u8; 5]; 9],
     width: u8,
 }
@@ -62,17 +67,24 @@ impl MazeFont {
         }
     }
 
-    pub fn get_symbol(&self, c: char) -> FontSymbol {
+    pub fn get_symbol(&self, c: char) -> Result<FontSymbol, MazeFontError> {
         if c == 'A' {
-            self.symbols[0]
+            Ok(self.symbols[0])
+        } else if c == 'B' {
+            Ok(self.symbols[1])
         } else if c == ' ' {
-            self.symbols[2]
+            Ok(self.symbols[2])
         } else {
-            self.symbols[1]
+            Err(MazeFontError::UnsupportedSymbol)
         }
     }
 
-    pub fn generate_text(&self, s: &str, mut pos: Point, maze: &mut Grid) {
+    pub fn generate_text(
+        &self,
+        s: &str,
+        mut pos: Point,
+        maze: &mut Grid,
+    ) -> Result<(), MazeFontError> {
         let symbol_width = 6;
         let tile = Tile {
             status: ConnectionStatus::Removed,
@@ -80,7 +92,7 @@ impl MazeFont {
         };
 
         for c in s.chars() {
-            let sym = self.get_symbol(c);
+            let sym = self.get_symbol(c)?;
 
             for y in 0..9 {
                 for x in 0..5 {
@@ -92,5 +104,7 @@ impl MazeFont {
 
             pos.x += sym.width as i16 + 1;
         }
+
+        Ok(())
     }
 }
