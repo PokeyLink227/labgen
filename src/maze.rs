@@ -470,7 +470,9 @@ fn create_maze_backtrack(
 
     // try to remove the 1 frame delay before disapearing
     // it is caused by "moving" the marker to the first cell twice
-    history.remove_marker();
+    if log_temps {
+        history.remove_marker();
+    }
 }
 
 fn create_maze_prim_simple(
