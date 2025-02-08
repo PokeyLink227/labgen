@@ -1,7 +1,7 @@
 use crate::{
     grid::{ConnectionStatus, Direction, Grid, Point, Rect, Tile},
     history::{MazeAction, MazeHistory},
-    mazetext::MazeFont,
+    mazetext::{MazeFont, MazeText},
 };
 use rand::{seq::SliceRandom, Rng};
 use std::array;
@@ -66,7 +66,7 @@ pub fn generate_maze(
     wrap: Option<MazeWrap>,
     rooms: &[Rect],
     exclusions: &[Rect],
-    text: &[(Point, &str)],
+    text: &[MazeText],
     uncarve_percent: u8,
     log_temps: bool,
     rng: &mut impl Rng,
@@ -80,8 +80,8 @@ pub fn generate_maze(
     if !text.is_empty() {
         let font = MazeFont::read_font("examples/default_font.png").unwrap();
 
-        for (pos, s) in text {
-            let _ = font.generate_text(s, *pos, &mut maze);
+        for t in text {
+            let _ = font.generate_text(*t, &mut maze);
         }
     }
 

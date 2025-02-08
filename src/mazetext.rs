@@ -1,10 +1,33 @@
 use crate::grid::{ConnectionStatus, Direction, Grid, Point, Rect, Tile};
-use std::fs::File;
+use regex::Regex;
+use std::{cell::LazyCell, fs::File, str::FromStr};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MazeFontError {
+pub enum MazeTextError {
     UnsupportedSymbol,
     BadDimensions,
+    CouldntParseText,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct MazeText<'a>(pub Point, pub &'a str);
+
+impl<'a> MazeText<'a> {
+    pub fn from_str(s: &'a str) -> Result<MazeText<'a>, MazeTextError> {
+        let re: LazyCell<Regex> = LazyCell::new(|| {
+            Regex::new(r"\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\S+(\s*\S+))+\s*\)").unwrap()
+        });
+
+        let caps = re.captures(s).ok_or(MazeTextError::CouldntParseText)?;
+
+        return Ok(MazeText(
+            Point::new(
+                caps[1].parse().or(Err(MazeTextError::CouldntParseText))?,
+                caps[2].parse().or(Err(MazeTextError::CouldntParseText))?,
+            ),
+            caps.get(3).unwrap().as_str(),
+        ));
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -21,7 +44,7 @@ pub struct MazeFont {
 
 impl MazeFont {
     /// read in a font from a png
-    pub fn read_font(file_path: &str) -> Result<Self, MazeFontError> {
+    pub fn read_font(file_path: &str) -> Result<Self, MazeTextError> {
         let symbol_width = 8;
         let symbol_height = 9;
 
@@ -32,7 +55,7 @@ impl MazeFont {
         let image_height = image_info.height;
 
         if image_height != symbol_height * 3 || image_width != symbol_width * 32 {
-            return Err(MazeFontError::BadDimensions);
+            return Err(MazeTextError::BadDimensions);
         }
 
         let mut buf = vec![0; reader.output_buffer_size()];
@@ -49,7 +72,8 @@ impl MazeFont {
         }
 
         // generate the width of each symbol
-        for i in 0..font.symbols.len() {
+        font.symbols[0].width = 1;
+        for i in 1..font.symbols.len() {
             let mut max_len = 0;
             for row in 0..9 {
                 max_len = std::cmp::max(max_len, 8 - font.symbols[i].pixels[row].trailing_zeros());
@@ -60,27 +84,22 @@ impl MazeFont {
         Ok(font)
     }
 
-    pub fn get_symbol(&self, c: char) -> Result<FontSymbol, MazeFontError> {
+    pub fn get_symbol(&self, c: char) -> Result<FontSymbol, MazeTextError> {
         if (c as u32) & 0b10000000 != 0 || (c as u32) < 32 {
-            Err(MazeFontError::UnsupportedSymbol)
+            Err(MazeTextError::UnsupportedSymbol)
         } else {
             Ok(self.symbols[c as usize - 32])
         }
     }
 
-    pub fn generate_text(
-        &self,
-        s: &str,
-        mut pos: Point,
-        maze: &mut Grid,
-    ) -> Result<(), MazeFontError> {
-        let symbol_width = 6;
+    pub fn generate_text(&self, text: MazeText, maze: &mut Grid) -> Result<(), MazeTextError> {
+        let mut pos = text.0;
         let tile = Tile {
             status: ConnectionStatus::Removed,
             connections: Direction::NoDir as u8,
         };
 
-        for c in s.chars() {
+        for c in text.1.chars() {
             let sym = self.get_symbol(c)?;
 
             for y in 0..9 {

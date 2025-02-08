@@ -2,6 +2,7 @@ use crate::{
     grid::{Point, Rect},
     image::{generate_gif, generate_gif_compressed, generate_png, AnimationOptions, ImageOptions},
     maze::{generate_maze, MazeType, MazeWrap},
+    mazetext::MazeText,
 };
 use clap::Parser;
 use rand::{rngs::StdRng, SeedableRng};
@@ -103,6 +104,10 @@ struct Args {
     /// Comma seperated list of rects (x,y,w,h);(x,y,w,h)
     #[arg(long = "exclude")]
     exclusions: Option<String>,
+
+    /// Comma seperated list of MazeText objects (x,y,str);(x,y,str)
+    #[arg(long = "text", default_value = "")]
+    text: String,
 }
 
 fn main() {
@@ -135,8 +140,17 @@ fn main() {
         Vec::new()
     };
 
-    //let text = vec![(Point::new(2, 2), "LabGen")];
-    let text = vec![];
+    let text: Vec<MazeText> = if !args.text.is_empty() {
+        match args.text.split(';').map(MazeText::from_str).collect() {
+            Ok(v) => v,
+            Err(e) => {
+                println!("Error: {:?}", e);
+                return;
+            }
+        }
+    } else {
+        Vec::new()
+    };
 
     let seed: u64 = args.seed.unwrap_or(rand::random::<u64>());
     let mut rng: StdRng = StdRng::seed_from_u64(seed);
