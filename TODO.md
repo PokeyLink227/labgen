@@ -12,6 +12,8 @@ wrapping rooms
 user-defined textures for cell-types
 pass algo a function to use for finding adjacant tiles
 
+render text as exclusions
+
 
 instead of flood fill
 carve through maze like normal and when crossing the boundry into a new area swap algo

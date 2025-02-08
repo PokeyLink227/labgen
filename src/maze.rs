@@ -1,6 +1,7 @@
 use crate::{
     grid::{ConnectionStatus, Direction, Grid, Point, Rect, Tile},
     history::{MazeAction, MazeHistory},
+    mazetext::MazeFont,
 };
 use rand::{seq::SliceRandom, Rng};
 use std::array;
@@ -74,6 +75,9 @@ pub fn generate_maze(
         width,
         height,
     };
+
+    let f = MazeFont::read_font("default_font.png");
+    f.generate_text("AB ABB", Point::new(1, 1), &mut maze);
 
     // remove all exclusions from the maze
     for r in exclusions {

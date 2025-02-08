@@ -11,6 +11,7 @@ mod grid;
 mod history;
 mod image;
 mod maze;
+mod mazetext;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
