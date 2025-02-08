@@ -66,6 +66,7 @@ pub fn generate_maze(
     wrap: Option<MazeWrap>,
     rooms: &[Rect],
     exclusions: &[Rect],
+    text: &[(Point, &str)],
     uncarve_percent: u8,
     log_temps: bool,
     rng: &mut impl Rng,
@@ -76,8 +77,13 @@ pub fn generate_maze(
         height,
     };
 
-    let f = MazeFont::read_font("default_font.png");
-    f.generate_text("AB ABB", Point::new(2, 2), &mut maze);
+    if !text.is_empty() {
+        let font = MazeFont::read_font("examples/default_font.png").unwrap();
+
+        for (pos, s) in text {
+            let _ = font.generate_text(s, *pos, &mut maze);
+        }
+    }
 
     // remove all exclusions from the maze
     for r in exclusions {

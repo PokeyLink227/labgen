@@ -1,3 +1,7 @@
+# Labgen
+
+![logo](examples/logo.png "logo")
+
 ## Examples
 ![compressed gif example](examples/example.gif "Kruskals Compressed Gif")
 ![compressed gif example](examples/example2.gif "Wilsons Compressed Gif with deadend removal")

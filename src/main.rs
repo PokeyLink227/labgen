@@ -1,5 +1,5 @@
 use crate::{
-    grid::Rect,
+    grid::{Point, Rect},
     image::{generate_gif, generate_gif_compressed, generate_png, AnimationOptions, ImageOptions},
     maze::{generate_maze, MazeType, MazeWrap},
 };
@@ -135,6 +135,9 @@ fn main() {
         Vec::new()
     };
 
+    //let text = vec![(Point::new(2, 2), "LabGen")];
+    let text = vec![];
+
     let seed: u64 = args.seed.unwrap_or(rand::random::<u64>());
     let mut rng: StdRng = StdRng::seed_from_u64(seed);
     println!("seed: {}", seed);
@@ -147,6 +150,7 @@ fn main() {
         args.wrap,
         &rooms,
         &exclude,
+        &text,
         args.uncarve_percent,
         args.log_temps && args.animate,
         &mut rng,
