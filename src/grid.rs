@@ -116,12 +116,84 @@ impl Point {
     }
 }
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum ParseRectError {
+    MissingOpenParen,
+    MissingCloseParen,
+    NotEnoughFields,
+    TooManyFields,
+    NegativeDimension,
+    CouldntParseInt,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Rect {
     pub x: i16,
     pub y: i16,
     pub w: i16,
     pub h: i16,
+}
+
+impl FromStr for Rect {
+    type Err = ParseRectError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len() < 9 {
+            return Err(ParseRectError::NotEnoughFields);
+        }
+
+        // check for parens
+        if s.chars().nth(0).unwrap() != '(' {
+            return Err(ParseRectError::MissingOpenParen);
+        }
+        if s.chars().nth(s.len() - 1).unwrap() != ')' {
+            return Err(ParseRectError::MissingCloseParen);
+        }
+
+        let mut fields_iter = s[1..s.len() - 1].split(',');
+
+        let r = Ok(Rect {
+            x: if let Some(f) = fields_iter.next() {
+                println!("i: {}", f);
+                match f.parse() {
+                    Ok(val) => val,
+                    Err(_) => return Err(ParseRectError::CouldntParseInt),
+                }
+            } else {
+                return Err(ParseRectError::NotEnoughFields);
+            },
+            y: if let Some(f) = fields_iter.next() {
+                match f.parse() {
+                    Ok(val) => val,
+                    Err(_) => return Err(ParseRectError::CouldntParseInt),
+                }
+            } else {
+                return Err(ParseRectError::NotEnoughFields);
+            },
+            w: if let Some(f) = fields_iter.next() {
+                match f.parse() {
+                    Ok(val) => val,
+                    Err(_) => return Err(ParseRectError::CouldntParseInt),
+                }
+            } else {
+                return Err(ParseRectError::NotEnoughFields);
+            },
+            h: if let Some(f) = fields_iter.next() {
+                match f.parse() {
+                    Ok(val) => val,
+                    Err(_) => return Err(ParseRectError::CouldntParseInt),
+                }
+            } else {
+                return Err(ParseRectError::NotEnoughFields);
+            },
+        });
+
+        if fields_iter.next().is_none() {
+            r
+        } else {
+            Err(ParseRectError::TooManyFields)
+        }
+    }
 }
 
 impl Rect {

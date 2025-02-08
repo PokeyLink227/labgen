@@ -4,8 +4,9 @@ use crate::{
     maze::{generate_maze, MazeType, MazeWrap},
 };
 use clap::Parser;
+use grid::ParseRectError;
 use rand::{rngs::StdRng, SeedableRng};
-use std::time::Instant;
+use std::{str::FromStr, time::Instant};
 
 mod grid;
 mod history;
@@ -94,18 +95,49 @@ struct Args {
     /// suppress output
     #[arg(long = "nosave", default_value = "false")]
     nosave: bool,
+
+    /// Comma seperated list of rects (x,y,w,h);(x,y,w,h)
+    #[arg(long = "room")]
+    rooms: Option<String>,
+
+    /// Comma seperated list of rects (x,y,w,h);(x,y,w,h)
+    #[arg(long = "exclude")]
+    exclusions: Option<String>,
 }
 
 fn main() {
     let args = Args::parse();
 
+    // parse args section
+    let rooms: Vec<Rect> = if let Some(s) = args.rooms {
+        let res = s.split(';').map(|s| Rect::from_str(s)).collect();
+        match res {
+            Ok(v) => v,
+            Err(e) => {
+                println!("Error: {:?}", e);
+                return;
+            }
+        }
+    } else {
+        Vec::new()
+    };
+
+    let exclude: Vec<Rect> = if let Some(s) = args.exclusions {
+        let res = s.split(';').map(|s| Rect::from_str(s)).collect();
+        match res {
+            Ok(v) => v,
+            Err(e) => {
+                println!("Error: {:?}", e);
+                return;
+            }
+        }
+    } else {
+        Vec::new()
+    };
+
     let seed: u64 = args.seed.unwrap_or(rand::random::<u64>());
     let mut rng: StdRng = StdRng::seed_from_u64(seed);
     println!("seed: {}", seed);
-
-    let exclude = vec![];
-
-    let rooms = vec![];
 
     let mut now = Instant::now();
     let (nodes, hist) = generate_maze(
