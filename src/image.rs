@@ -143,11 +143,9 @@ pub fn generate_gif(
         match *action {
             MazeAction::Add(p, d) => {
                 (pt, dir, cell_filling) = (p, d, 1);
-                frame_num += 1;
             }
             MazeAction::Remove(p, d) => {
                 (pt, dir, cell_filling) = (p, d, 0);
-                frame_num += 1;
             }
             MazeAction::RemoveEdge(p, d) => {
                 if d == Direction::NoDir {
@@ -182,15 +180,12 @@ pub fn generate_gif(
                 }
 
                 skip_draw = true;
-                frame_num += 1;
             }
             MazeAction::AddTemp(p, d) => {
                 (pt, dir, cell_filling) = (p, d, 2);
-                frame_num += 1;
             }
             MazeAction::AddMarker(p) => {
                 (pt, dir, cell_filling) = (p, Direction::NoDir, 3);
-                frame_num += 1;
             }
             MazeAction::StartFrame => {
                 write_frame = false;
@@ -200,7 +195,6 @@ pub fn generate_gif(
                 (pt, dir, cell_filling) = (Point::new(0, 0), Direction::NoDir, 0);
                 skip_draw = true;
                 write_frame = true;
-                frame_num += 1;
             }
         }
 
@@ -229,6 +223,10 @@ pub fn generate_gif(
                     }
                 }
             }
+        }
+
+        if write_frame {
+            frame_num += 1;
         }
 
         // generate and save frame
