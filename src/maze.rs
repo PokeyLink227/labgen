@@ -3,10 +3,7 @@ use crate::{
     history::{MazeAction, MazeHistory},
 };
 use rand::{seq::SliceRandom, Rng};
-use std::{
-    array,
-    ops::{Add, AddAssign},
-};
+use std::array;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Vector2<T> {
@@ -54,7 +51,7 @@ fn opposite(src: u8) -> u8 {
 */
 
 fn pick_random(points: &[(usize, Point)], rng: &mut impl Rng) -> Option<(usize, Point)> {
-    if points.len() > 0 {
+    if !points.is_empty() {
         Some(points[rng.gen_range(0..points.len())])
     } else {
         None
@@ -198,11 +195,8 @@ pub fn generate_maze(
         .collect::<Vec<(usize, u32)>>();
 
     // shuffle the region map for algos that need a shuffled reservoir
-    match mtype {
-        MazeType::Wilson => {
-            sorted_region_map.shuffle(rng);
-        }
-        _ => {}
+    if mtype == MazeType::Wilson {
+        sorted_region_map.shuffle(rng);
     }
     sorted_region_map.sort_by(|(_, a), (_, b)| a.cmp(b));
 
@@ -320,8 +314,8 @@ pub fn generate_maze(
         // group the edges by which region they connect to
         // for each group of edges pick one and add it to the maze
 
-        for y in 0..room.h as i16 {
-            for x in 0..room.w as i16 {
+        for y in 0..room.h {
+            for x in 0..room.w {
                 let pos = Point::new(room.x + x, room.y + y);
                 let adj = match wrap {
                     Some(w) => pos.adjacent_wrapped(w, maze.width, maze.height),
@@ -1101,7 +1095,7 @@ fn generate_noise(
     points
 }
 
-fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point, rng: &mut impl Rng) {
+fn flood_tile_prim(maze: &mut Grid, noise_map: &[u8], mut pos: Point, rng: &mut impl Rng) {
     if pos.x >= maze.width as i16 || pos.y >= maze.height as i16 {
         return;
     }
@@ -1153,7 +1147,7 @@ fn flood_tile_prim(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point, rng: &m
     }
 }
 
-fn flood_tile_backtrack(maze: &mut Grid, noise_map: &Vec<u8>, mut pos: Point, rng: &mut impl Rng) {
+fn flood_tile_backtrack(maze: &mut Grid, noise_map: &[u8], mut pos: Point, rng: &mut impl Rng) {
     if pos.x >= maze.width as i16 || pos.y >= maze.height as i16 {
         return;
     }

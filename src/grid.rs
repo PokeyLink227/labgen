@@ -1,7 +1,6 @@
 use crate::maze::MazeWrap;
 use std::{
     array,
-    fmt::Display,
     ops::{Add, AddAssign},
     str::FromStr,
 };
@@ -246,7 +245,9 @@ impl From<u8> for Direction {
 
 impl Direction {
     pub fn opposite(self) -> Self {
-        ((((self as u8) << 4) | ((self as u8) >> 4)) & 0b11111111).into()
+        // only needed to mask when there were 4 bits being used
+        // ((((self as u8) << 4) | ((self as u8) >> 4)) & 0b11111111).into()
+        (((self as u8) << 4) | ((self as u8) >> 4)).into()
     }
 
     // constructs a direction by starting at north and rotation clockwise

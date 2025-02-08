@@ -140,16 +140,16 @@ pub fn generate_gif(
     for action in history {
         let (pt, dir, cell_filling);
         skip_draw = false;
-        match action {
-            &MazeAction::Add(p, d) => {
+        match *action {
+            MazeAction::Add(p, d) => {
                 (pt, dir, cell_filling) = (p, d, 1);
                 frame_num += 1;
             }
-            &MazeAction::Remove(p, d) => {
+            MazeAction::Remove(p, d) => {
                 (pt, dir, cell_filling) = (p, d, 0);
                 frame_num += 1;
             }
-            &MazeAction::RemoveEdge(p, d) => {
+            MazeAction::RemoveEdge(p, d) => {
                 if d == Direction::NoDir {
                     continue;
                 }
@@ -184,19 +184,19 @@ pub fn generate_gif(
                 skip_draw = true;
                 frame_num += 1;
             }
-            &MazeAction::AddTemp(p, d) => {
+            MazeAction::AddTemp(p, d) => {
                 (pt, dir, cell_filling) = (p, d, 2);
                 frame_num += 1;
             }
-            &MazeAction::AddMarker(p) => {
+            MazeAction::AddMarker(p) => {
                 (pt, dir, cell_filling) = (p, Direction::NoDir, 3);
                 frame_num += 1;
             }
-            &MazeAction::StartFrame => {
+            MazeAction::StartFrame => {
                 write_frame = false;
                 continue;
             }
-            &MazeAction::EndFrame => {
+            MazeAction::EndFrame => {
                 (pt, dir, cell_filling) = (Point::new(0, 0), Direction::NoDir, 0);
                 skip_draw = true;
                 write_frame = true;
@@ -298,9 +298,9 @@ pub fn generate_gif_compressed(
     }
 
     for action in history {
-        let (pt, dir, cell_filling) = match action {
-            &MazeAction::Add(pt, dir) => (pt, dir, &connected_cell),
-            &MazeAction::Remove(pt, dir) => (pt, dir, &blank_cell),
+        let (pt, dir, cell_filling) = match *action {
+            MazeAction::Add(pt, dir) => (pt, dir, &connected_cell),
+            MazeAction::Remove(pt, dir) => (pt, dir, &blank_cell),
             _ => todo!(),
         };
         let mut frame = Frame::default();
@@ -346,7 +346,7 @@ pub fn generate_png(maze: &Grid, opts: &ImageOptions) {
     );
 
     let file = File::create(format!("{}.png", &opts.file_path).as_str()).unwrap();
-    let ref mut writer = BufWriter::new(file);
+    let writer = &mut BufWriter::new(file);
 
     let mut encoder = png::Encoder::new(writer, width as u32, height as u32);
     encoder.set_color(png::ColorType::Indexed);
@@ -363,8 +363,8 @@ pub fn generate_png(maze: &Grid, opts: &ImageOptions) {
                 continue;
             }
 
-            let top: u16 = py as u16 * cell_width + opts.wall_width;
-            let left: u16 = px as u16 * cell_width + opts.wall_width;
+            let top: u16 = py * cell_width + opts.wall_width;
+            let left: u16 = px * cell_width + opts.wall_width;
 
             for y in 0..opts.passage_width {
                 for x in 0..opts.passage_width {
@@ -395,22 +395,18 @@ pub fn generate_png(maze: &Grid, opts: &ImageOptions) {
 
             // only needed for wrapping mazes
             // only chekc on edges to reduce overdraw
-            if px == 0 {
-                if tile.connections & Direction::West as u8 != 0 {
-                    for y in 0..opts.passage_width {
-                        for x in 0..=opts.wall_width {
-                            pixels[(left - x) as usize + ((y + top) as usize * width as usize)] = 1;
-                        }
+            if px == 0 && tile.connections & Direction::West as u8 != 0 {
+                for y in 0..opts.passage_width {
+                    for x in 0..=opts.wall_width {
+                        pixels[(left - x) as usize + ((y + top) as usize * width as usize)] = 1;
                     }
                 }
             }
 
-            if py == 0 {
-                if tile.connections & Direction::North as u8 != 0 {
-                    for y in 0..=opts.wall_width {
-                        for x in 0..opts.passage_width {
-                            pixels[(x + left) as usize + ((top - y) as usize * width as usize)] = 1;
-                        }
+            if py == 0 && tile.connections & Direction::North as u8 != 0 {
+                for y in 0..=opts.wall_width {
+                    for x in 0..opts.passage_width {
+                        pixels[(x + left) as usize + ((top - y) as usize * width as usize)] = 1;
                     }
                 }
             }

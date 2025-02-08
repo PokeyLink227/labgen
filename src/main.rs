@@ -4,7 +4,6 @@ use crate::{
     maze::{generate_maze, MazeType, MazeWrap},
 };
 use clap::Parser;
-use grid::ParseRectError;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{str::FromStr, time::Instant};
 
@@ -110,7 +109,7 @@ fn main() {
 
     // parse args section
     let rooms: Vec<Rect> = if let Some(s) = args.rooms {
-        let res = s.split(';').map(|s| Rect::from_str(s)).collect();
+        let res = s.split(';').map(Rect::from_str).collect();
         match res {
             Ok(v) => v,
             Err(e) => {
@@ -123,7 +122,7 @@ fn main() {
     };
 
     let exclude: Vec<Rect> = if let Some(s) = args.exclusions {
-        let res = s.split(';').map(|s| Rect::from_str(s)).collect();
+        let res = s.split(';').map(Rect::from_str).collect();
         match res {
             Ok(v) => v,
             Err(e) => {
