@@ -77,7 +77,7 @@ pub fn generate_maze(
     };
 
     let f = MazeFont::read_font("default_font.png");
-    f.generate_text("AB ABB", Point::new(1, 1), &mut maze);
+    f.generate_text("AB ABB", Point::new(2, 2), &mut maze);
 
     // remove all exclusions from the maze
     for r in exclusions {
