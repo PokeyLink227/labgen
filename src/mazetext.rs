@@ -16,9 +16,8 @@ pub struct MazeText<'a>(pub Point, pub &'a str);
 
 impl<'a> MazeText<'a> {
     pub fn from_str(s: &'a str) -> Result<MazeText<'a>, MazeTextError> {
-        let re: LazyCell<Regex> = LazyCell::new(|| {
-            Regex::new(r"\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\S+(\s*\S+))+\s*\)").unwrap()
-        });
+        let re: LazyCell<Regex> =
+            LazyCell::new(|| Regex::new(r"\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(.+)\)").unwrap());
 
         let caps = re.captures(s).ok_or(MazeTextError::CouldntParseText)?;
 
