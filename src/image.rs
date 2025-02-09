@@ -362,6 +362,8 @@ pub fn generate_png(maze: &Grid, opts: &ImageOptions) {
     let mut encoder = png::Encoder::new(writer, width as u32, height as u32);
     encoder.set_color(png::ColorType::Indexed);
     encoder.set_palette(&opts.color_map);
+    encoder.add_text_chunk("Author".to_owned(), "PokeyLink227".to_owned());
+    encoder.add_text_chunk("Software".to_owned(), "Labgen".to_owned());
 
     let mut writer = encoder.write_header().unwrap();
 
