@@ -77,7 +77,7 @@ pub fn generate_maze(
     };
 
     if !text.is_empty() {
-        let font = match MazeFont::read_font("examples/default_font.png") {
+        let font = match MazeFont::read_font("default_font.png") {
             Ok(f) => f,
             Err(e) => {
                 println!("Error: {:?}", e);
