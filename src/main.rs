@@ -1,6 +1,9 @@
 use crate::{
     grid::{Point, Rect},
-    image::{generate_gif, generate_gif_compressed, generate_png, AnimationOptions, ImageOptions},
+    image::{
+        generate_gif, generate_gif_compressed, generate_png, generate_svg, AnimationOptions,
+        ImageFormat, ImageOptions,
+    },
     maze::{generate_maze, MazeType, MazeWrap},
     mazetext::MazeText,
 };
@@ -43,8 +46,12 @@ struct Args {
     animate: bool,
 
     /// try to compress generated gif
-    #[arg(short = 'c', long = "compress", default_value = "false")]
-    compress: bool,
+    //#[arg(short = 'c', long = "compress", default_value = "false")]
+    //compress: bool,
+
+    /// generate an animation rather than an image
+    #[arg(short = 'f', long = "format")]
+    format: Option<ImageFormat>,
 
     /// number of new cells to draw per frame of animation
     #[arg(
@@ -68,7 +75,7 @@ struct Args {
     wall_width: u16,
 
     /// length of time between frames (units of 10ms)
-    #[arg(short = 'f', long = "frametime", default_value = "2")]
+    #[arg(long = "frametime", default_value = "2")]
     frame_time: u16,
 
     /// length of time for final frame (units of 10ms)
@@ -187,14 +194,17 @@ fn main() {
     };
 
     if !args.nosave {
-        if args.animate {
-            if args.compress {
-                generate_gif_compressed(&nodes, hist.get_actions(), &rooms, &opts, &ani_opts);
-            } else {
-                generate_gif(&nodes, hist.get_actions(), &rooms, &opts, &ani_opts);
+        match args.format {
+            Some(ImageFormat::Png) => generate_png(&nodes, &opts),
+            Some(ImageFormat::Gif) => {
+                generate_gif(&nodes, hist.get_actions(), &rooms, &opts, &ani_opts)
             }
-        } else {
-            generate_png(&nodes, &opts);
+            Some(ImageFormat::CompressedGif) => {
+                generate_gif_compressed(&nodes, hist.get_actions(), &rooms, &opts, &ani_opts)
+            }
+            Some(ImageFormat::Svg) => generate_svg(&nodes, &opts),
+            // try to infer format
+            None => generate_png(&nodes, &opts),
         }
     }
     let image_time = now.elapsed();

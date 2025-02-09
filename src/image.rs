@@ -3,7 +3,20 @@ use crate::{
     history::MazeAction,
 };
 use gif::{DisposalMethod, Encoder, Frame, Repeat};
-use std::{borrow::Cow, fs::File, io::BufWriter};
+use std::{
+    borrow::Cow,
+    fs::File,
+    io::{BufWriter, Write},
+};
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, clap::ValueEnum)]
+pub enum ImageFormat {
+    Gif,
+    CompressedGif,
+    #[default]
+    Png,
+    Svg,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ImageOptions {
@@ -412,4 +425,76 @@ pub fn generate_png(maze: &Grid, opts: &ImageOptions) {
     }
 
     writer.write_image_data(&pixels).unwrap();
+}
+
+pub fn generate_svg(maze: &Grid, opts: &ImageOptions) {
+    let file = File::create(format!("{}.svg", &opts.file_path).as_str()).unwrap();
+    let mut buf = BufWriter::new(file);
+
+    buf.write(
+        format!(
+            "<svg viewBox=\"-1 -1 {} {}\" xmlns=\"http://www.w3.org/2000/svg\" stroke=\"black\" stroke-width=\"0.25\" stroke-linecap=\"square\" shape-rendering=\"crispEdges\">",
+            maze.width + 2,
+            maze.height + 2,
+        ).as_bytes()
+    );
+
+    for y in 0..maze.height {
+        for x in 0..maze.width {
+            let tile = maze.get_tile(Point::new(x as i16, y as i16));
+
+            if tile.status == ConnectionStatus::Removed {
+                buf.write(
+                    format!(
+                        "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\"/>",
+                        x, y, 1, 1
+                    )
+                    .as_bytes(),
+                );
+            } else {
+                if tile.connections & Direction::North as u8 == 0 {
+                    buf.write(
+                        format!(
+                            "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\"/>",
+                            x,
+                            y,
+                            x + 1,
+                            y
+                        )
+                        .as_bytes(),
+                    );
+                }
+                if tile.connections & Direction::West as u8 == 0 {
+                    buf.write(
+                        format!(
+                            "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\"/>",
+                            x,
+                            y,
+                            x,
+                            y + 1
+                        )
+                        .as_bytes(),
+                    );
+                }
+            }
+        }
+    }
+
+    buf.write(
+        format!(
+            "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\"/>",
+            maze.width, 0, maze.width, maze.height,
+        )
+        .as_bytes(),
+    );
+
+    buf.write(
+        format!(
+            "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\"/>",
+            0, maze.height, maze.width, maze.height,
+        )
+        .as_bytes(),
+    );
+
+    buf.write(b"</svg>");
 }

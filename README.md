@@ -37,6 +37,7 @@
 |  Image Type | Animation | Batching | Wrapping | Exclusions | Rooms | Temporary Cells |
 |-------------|-----------|----------|----------|------------|-------|---------|
 | png            | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ |
+| svg            | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
 | gif            | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | gif-compressed | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ |
 

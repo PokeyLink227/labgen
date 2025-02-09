@@ -149,9 +149,6 @@ impl FromStr for Rect {
 
 impl Rect {
     pub fn new(x: i16, y: i16, w: i16, h: i16) -> Self {
-        assert_ne!(w, 0);
-        assert_ne!(h, 0);
-
         Rect { x, y, w, h }
     }
 }
