@@ -1,6 +1,6 @@
-use crate::grid::{ConnectionStatus, Direction, Grid, Point, Rect, Tile};
+use crate::grid::{ConnectionStatus, Direction, Grid, Point, Tile};
 use regex::Regex;
-use std::{cell::LazyCell, fs::File, str::FromStr};
+use std::{cell::LazyCell, fs::File};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MazeTextError {

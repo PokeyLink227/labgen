@@ -362,8 +362,12 @@ pub fn generate_png(maze: &Grid, opts: &ImageOptions) {
     let mut encoder = png::Encoder::new(writer, width as u32, height as u32);
     encoder.set_color(png::ColorType::Indexed);
     encoder.set_palette(&opts.color_map);
-    encoder.add_text_chunk("Author".to_owned(), "PokeyLink227".to_owned());
-    encoder.add_text_chunk("Software".to_owned(), "Labgen".to_owned());
+    encoder
+        .add_text_chunk("Author".to_owned(), "PokeyLink227".to_owned())
+        .unwrap();
+    encoder
+        .add_text_chunk("Software".to_owned(), "Labgen".to_owned())
+        .unwrap();
 
     let mut writer = encoder.write_header().unwrap();
 
@@ -384,21 +388,21 @@ pub fn generate_png(maze: &Grid, opts: &ImageOptions) {
                     pixels[(x + left) as usize + ((y + top) as usize * width as usize)] = 1;
                 }
             }
-            if tile.connections & Direction::East as u8 != 0 {
+            if tile.connected(Direction::East) {
                 for y in 0..opts.passage_width {
                     for x in opts.passage_width..cell_width {
                         pixels[(x + left) as usize + ((y + top) as usize * width as usize)] = 1;
                     }
                 }
             }
-            if tile.connections & Direction::South as u8 != 0 {
+            if tile.connected(Direction::South) {
                 for y in opts.passage_width..cell_width {
                     for x in 0..opts.passage_width {
                         pixels[(x + left) as usize + ((y + top) as usize * width as usize)] = 1;
                     }
                 }
             }
-            if tile.connections & Direction::SouthEast as u8 != 0 {
+            if tile.connected(Direction::SouthEast) {
                 for y in opts.passage_width..cell_width {
                     for x in opts.passage_width..cell_width {
                         pixels[(x + left) as usize + ((y + top) as usize * width as usize)] = 1;
@@ -408,7 +412,7 @@ pub fn generate_png(maze: &Grid, opts: &ImageOptions) {
 
             // only needed for wrapping mazes
             // only chekc on edges to reduce overdraw
-            if px == 0 && tile.connections & Direction::West as u8 != 0 {
+            if px == 0 && tile.connected(Direction::West) {
                 for y in 0..opts.passage_width {
                     for x in 0..=opts.wall_width {
                         pixels[(left - x) as usize + ((y + top) as usize * width as usize)] = 1;
@@ -416,7 +420,7 @@ pub fn generate_png(maze: &Grid, opts: &ImageOptions) {
                 }
             }
 
-            if py == 0 && tile.connections & Direction::North as u8 != 0 {
+            if py == 0 && tile.connected(Direction::North) {
                 for y in 0..=opts.wall_width {
                     for x in 0..opts.passage_width {
                         pixels[(x + left) as usize + ((top - y) as usize * width as usize)] = 1;
@@ -433,7 +437,7 @@ pub fn generate_svg(maze: &Grid, opts: &ImageOptions) {
     let file = File::create(format!("{}.svg", &opts.file_path).as_str()).unwrap();
     let mut buf = BufWriter::new(file);
 
-    buf.write(
+    let _ = buf.write(
         format!(
             "<svg viewBox=\"-1 -1 {} {}\" xmlns=\"http://www.w3.org/2000/svg\" stroke=\"black\" stroke-width=\"0.25\" stroke-linecap=\"square\" shape-rendering=\"crispEdges\">",
             maze.width + 2,
@@ -446,7 +450,7 @@ pub fn generate_svg(maze: &Grid, opts: &ImageOptions) {
             let tile = maze.get_tile(Point::new(x as i16, y as i16));
 
             if tile.status == ConnectionStatus::Removed {
-                buf.write(
+                let _ = buf.write(
                     format!(
                         "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\"/>",
                         x, y, 1, 1
@@ -454,8 +458,8 @@ pub fn generate_svg(maze: &Grid, opts: &ImageOptions) {
                     .as_bytes(),
                 );
             } else {
-                if tile.connections & Direction::North as u8 == 0 {
-                    buf.write(
+                if !tile.connected(Direction::North) {
+                    let _ = buf.write(
                         format!(
                             "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\"/>",
                             x,
@@ -466,8 +470,8 @@ pub fn generate_svg(maze: &Grid, opts: &ImageOptions) {
                         .as_bytes(),
                     );
                 }
-                if tile.connections & Direction::West as u8 == 0 {
-                    buf.write(
+                if !tile.connected(Direction::West) {
+                    let _ = buf.write(
                         format!(
                             "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\"/>",
                             x,
@@ -482,7 +486,7 @@ pub fn generate_svg(maze: &Grid, opts: &ImageOptions) {
         }
     }
 
-    buf.write(
+    let _ = buf.write(
         format!(
             "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\"/>",
             maze.width, 0, maze.width, maze.height,
@@ -490,7 +494,7 @@ pub fn generate_svg(maze: &Grid, opts: &ImageOptions) {
         .as_bytes(),
     );
 
-    buf.write(
+    let _ = buf.write(
         format!(
             "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\"/>",
             0, maze.height, maze.width, maze.height,
@@ -498,5 +502,5 @@ pub fn generate_svg(maze: &Grid, opts: &ImageOptions) {
         .as_bytes(),
     );
 
-    buf.write(b"</svg>");
+    let _ = buf.write(b"</svg>");
 }

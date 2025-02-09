@@ -1,5 +1,5 @@
 use crate::{
-    grid::{Point, Rect},
+    grid::Rect,
     image::{
         generate_gif, generate_gif_compressed, generate_png, generate_svg, AnimationOptions,
         ImageFormat, ImageOptions,

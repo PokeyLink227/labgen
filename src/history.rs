@@ -1,5 +1,4 @@
-use crate::grid::{ConnectionStatus, Direction, Grid, Point, Rect, Tile};
-use crate::maze::MazeWrap;
+use crate::grid::{Direction, Point};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MazeAction {

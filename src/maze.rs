@@ -1,10 +1,9 @@
 use crate::{
     grid::{ConnectionStatus, Direction, Grid, Point, Rect, Tile},
-    history::{MazeAction, MazeHistory},
+    history::MazeHistory,
     mazetext::{MazeFont, MazeText},
 };
 use rand::{seq::SliceRandom, Rng};
-use std::array;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Vector2<T> {
