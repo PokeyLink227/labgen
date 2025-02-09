@@ -7,7 +7,7 @@
 ![compressed gif example](examples/example.gif "Kruskals Compressed Gif")
 ![compressed gif example](examples/example2.gif "Wilsons Compressed Gif with deadend removal")
 
-![example](examples/backtrack.gif "Backtrack gif with temporary cells")
+> ![example](examples/backtrack.gif "Backtrack gif with temporary cells")
 > `cargo run -- 15 15 -a -fgif --tempcells -obacktrack`
 
 
