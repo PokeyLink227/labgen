@@ -3,3 +3,4 @@
 *.gif
 *.svg
 !examples/*
+!default_font.png
