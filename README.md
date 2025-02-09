@@ -1,6 +1,7 @@
 # Labgen
 
 ![logo](examples/logo.png "logo")
+> `cargo run -- 34 11 --text (2,2,LabGen) --passagewidth 17 --wallwidth 3 -ologo`
 
 ## Examples
 ![compressed gif example](examples/example.gif "Kruskals Compressed Gif")
