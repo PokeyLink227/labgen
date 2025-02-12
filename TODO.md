@@ -12,7 +12,7 @@ wrapping rooms
 user-defined textures for cell-types
 pass algo a function to use for finding adjacant tiles
 
-render text as exclusions
+make string parsing use regex.captures to allow users to use reserved characters
 
 
 instead of flood fill
