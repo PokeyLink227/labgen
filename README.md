@@ -50,3 +50,5 @@
 - binary tree mazes with rooms or exclusions will develop isolated regions
 - animations generated with wrapping will only render one side of the passage when wrapping around the edge
 - temp cells do not work with wrapping
+- algo will fail to connect all regions under certain configurations
+    - cargo run -- 10 10 --exclude (1,1,1,8);(8,1,1,8) --room (2,0,6,5);(2,5,6,5)
