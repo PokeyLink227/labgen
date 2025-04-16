@@ -617,7 +617,7 @@ fn create_maze_sidewinder(
             //let range_len = rng.gen_range(1..=maze.width - cells_added);
             // emulates cell by cell choice to extend the passage
             let mut range_len = 1;
-            while range_len < maze.width - cells_added && rng.r#gen::<bool>() {
+            while range_len < maze.width - cells_added && rng.random::<bool>() {
                 range_len += 1;
             }
 
