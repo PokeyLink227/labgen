@@ -115,7 +115,7 @@ impl MazeFont {
             for y in 0..9 {
                 for x in 0..8 {
                     if (sym.pixels[y as usize] >> (7 - x)) & 1 == 1 {
-                        maze.set_tile(pos + Point { x, y }, tile);
+                        maze[pos + Point { x, y }] = tile;
                     }
                 }
             }

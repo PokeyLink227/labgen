@@ -97,13 +97,10 @@ pub fn generate_maze(
     for r in exclusions {
         for y in r.y..(r.y + r.h) {
             for x in r.x..(r.x + r.w) {
-                maze.set_tile(
-                    Point::new(x, y),
-                    Tile {
-                        status: ConnectionStatus::Removed,
-                        connections: Direction::NoDir as u8,
-                    },
-                );
+                maze[(x, y)] = Tile {
+                    status: ConnectionStatus::Removed,
+                    connections: Direction::NoDir as u8,
+                };
             }
         }
     }
@@ -138,8 +135,8 @@ pub fn generate_maze(
                         | Direction::SouthEast as u8);
                 }
 
-                maze.get_tile_mut(Point::new(x + r.x, y + r.y)).status = ConnectionStatus::Room;
-                maze.get_tile_mut(Point::new(x + r.x, y + r.y)).connections |= connections;
+                maze[(x + r.x, y + r.y)].status = ConnectionStatus::Room;
+                maze[(x + r.x, y + r.y)].connections |= connections;
             }
         }
     }
@@ -150,7 +147,7 @@ pub fn generate_maze(
     for y in 0..height as i16 {
         for x in 0..width as i16 {
             let pos = Point::new(x, y);
-            let status = maze.get_tile(pos).status;
+            let status = maze[pos].status;
 
             // we need to connect all unvisited tiles and all rooms to each other seperately
             if status == ConnectionStatus::UnVisited {
@@ -160,9 +157,7 @@ pub fn generate_maze(
             }
 
             if (wrap == Some(MazeWrap::Full) || wrap == Some(MazeWrap::Horizontal) || x > 0)
-                && maze
-                    .get_tile(pos.travel_wrapped(Direction::West, maze.width, maze.height))
-                    .status
+                && maze[pos.travel_wrapped(Direction::West, maze.width, maze.height)].status
                     == status
             {
                 merge_sets(
@@ -173,9 +168,7 @@ pub fn generate_maze(
             }
 
             if (wrap == Some(MazeWrap::Full) || wrap == Some(MazeWrap::Vertical) || y > 0)
-                && maze
-                    .get_tile(pos.travel_wrapped(Direction::North, maze.width, maze.height))
-                    .status
+                && maze[pos.travel_wrapped(Direction::North, maze.width, maze.height)].status
                     == status
             {
                 merge_sets(
@@ -277,13 +270,10 @@ pub fn generate_maze(
         MazeType::Wilson => {
             for region in region_slices {
                 if region.len() == 1 {
-                    maze.set_tile(
-                        region[0],
-                        Tile {
-                            status: ConnectionStatus::InMaze,
-                            connections: Direction::NoDir as u8,
-                        },
-                    );
+                    maze[region[0]] = Tile {
+                        status: ConnectionStatus::InMaze,
+                        connections: Direction::NoDir as u8,
+                    };
                     history.add_cell(region[0]);
                 } else {
                     create_maze_wilson(&mut maze, region, wrap, log_temps, &mut history, rng);
@@ -297,13 +287,10 @@ pub fn generate_maze(
             // kruskals only works on edges so it wont fill single tiles
             for region in region_slices {
                 if region.len() == 1 {
-                    maze.set_tile(
-                        region[0],
-                        Tile {
-                            status: ConnectionStatus::InMaze,
-                            connections: Direction::NoDir as u8,
-                        },
-                    );
+                    maze[region[0]] = Tile {
+                        status: ConnectionStatus::InMaze,
+                        connections: Direction::NoDir as u8,
+                    };
                     history.add_cell(region[0]);
                 }
             }
@@ -341,7 +328,7 @@ pub fn generate_maze(
                 };
                 adj.enumerate()
                     .filter(|&(_, x)| {
-                        maze.contains(x) && maze.get_tile(x).status == ConnectionStatus::InMaze
+                        maze.contains(x) && maze[x].status == ConnectionStatus::InMaze
                     })
                     .for_each(|(i, _)| {
                         edges.push(Edge(pos, Direction::from_clock_cardinal(i as u8)));
@@ -366,8 +353,8 @@ pub fn generate_maze(
             maze.get_index(node2),
         ) {
             history.carve(e.0, e.1);
-            maze.get_tile_mut(node1).connect(e.1);
-            maze.get_tile_mut(node2).connect(e.1.opposite());
+            maze[node1].connect(e.1);
+            maze[node2].connect(e.1.opposite());
         }
     }
 
@@ -378,8 +365,8 @@ pub fn generate_maze(
         for y in 0..maze.height as i16 {
             for x in 0..maze.width as i16 {
                 let pos = Point::new(x, y);
-                if maze.get_tile(pos).status == ConnectionStatus::InMaze
-                    && maze.get_tile(pos).count_connections() <= 1
+                if maze[pos].status == ConnectionStatus::InMaze
+                    && maze[pos].count_connections() <= 1
                 {
                     deadends.push(pos);
                 }
@@ -393,19 +380,19 @@ pub fn generate_maze(
             // pick a random deadend
             let index = rng.gen_range(0..deadends.len());
             let pos = deadends[index];
-            maze.get_tile_mut(pos).status = ConnectionStatus::Removed;
+            maze[pos].status = ConnectionStatus::Removed;
 
-            if maze.get_tile(pos).count_connections() == 0 {
+            if maze[pos].count_connections() == 0 {
                 history.remove_cell(pos);
                 deadends.swap_remove(index);
             } else {
-                let dir: Direction = maze.get_tile(pos).connections.into();
+                let dir: Direction = maze[pos].connections.into();
                 history.uncarve(pos, dir);
 
                 let new_pos = pos.travel(dir);
-                maze.get_tile_mut(new_pos).unconnect(dir.opposite());
+                maze[new_pos].unconnect(dir.opposite());
 
-                if maze.get_tile(new_pos).count_connections() == 1 {
+                if maze[new_pos].count_connections() == 1 {
                     deadends[index] = new_pos;
                 } else {
                     deadends.swap_remove(index);
@@ -431,11 +418,11 @@ fn create_maze_backtrack(
     let mut pos = start_pos;
 
     if log_temps {
-        maze.get_tile_mut(pos).status = ConnectionStatus::Visited;
+        maze[pos].status = ConnectionStatus::Visited;
         history.carve_temp(pos, Direction::NoDir);
         history.place_marker(pos);
     } else {
-        maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
+        maze[pos].status = ConnectionStatus::InMaze;
         history.add_cell(pos);
     }
     stack.push((pos, Direction::NoDir));
@@ -449,7 +436,7 @@ fn create_maze_backtrack(
         };
         let next = adj
             .enumerate()
-            .filter(|&(_, x)| maze.contains(x) && maze.get_tile(x).carveable())
+            .filter(|&(_, x)| maze.contains(x) && maze[x].carveable())
             .collect::<Vec<(usize, Point)>>()
             .choose(rng)
             .copied();
@@ -459,25 +446,25 @@ fn create_maze_backtrack(
                 let (p, d) = stack.pop().unwrap();
                 if log_temps {
                     // convert temp
-                    maze.get_tile_mut(p).status = ConnectionStatus::InMaze;
+                    maze[p].status = ConnectionStatus::InMaze;
                     //history.carve(p, d);
                     history.move_marker(d);
                 }
             }
             Some(next) => {
                 let dir = Direction::from_clock_cardinal(next.0 as u8);
-                maze.get_tile_mut(pos).connect(dir);
+                maze[pos].connect(dir);
 
                 pos = next.1;
-                maze.get_tile_mut(pos).connect(dir.opposite());
+                maze[pos].connect(dir.opposite());
 
                 if log_temps {
-                    maze.get_tile_mut(pos).status = ConnectionStatus::Visited;
+                    maze[pos].status = ConnectionStatus::Visited;
                     // need to add temp tracking to marker code
                     //history.carve_temp(pos, dir.opposite());
                     history.move_marker_temp(dir);
                 } else {
-                    maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
+                    maze[pos].status = ConnectionStatus::InMaze;
                     history.carve(pos, dir.opposite());
                 }
 
@@ -503,7 +490,7 @@ fn create_maze_prim_simple(
     let mut open_tiles: Vec<Point> = Vec::new();
     let mut pos = start_pos;
 
-    maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
+    maze[pos].status = ConnectionStatus::InMaze;
     open_tiles.push(pos);
     history.add_cell(pos);
 
@@ -517,7 +504,7 @@ fn create_maze_prim_simple(
         };
         let next = adj
             .enumerate()
-            .filter(|&(_, x)| maze.contains(x) && maze.get_tile(x).carveable())
+            .filter(|&(_, x)| maze.contains(x) && maze[x].carveable())
             .collect::<Vec<(usize, Point)>>()
             .choose(rng)
             .copied();
@@ -528,11 +515,11 @@ fn create_maze_prim_simple(
             }
             Some(next) => {
                 let dir = Direction::from_clock_cardinal(next.0 as u8);
-                maze.get_tile_mut(pos).connect(dir);
+                maze[pos].connect(dir);
 
                 pos = next.1;
-                maze.get_tile_mut(pos).connect(dir.opposite());
-                maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
+                maze[pos].connect(dir.opposite());
+                maze[pos].status = ConnectionStatus::InMaze;
 
                 open_tiles.push(pos);
                 history.carve(pos, dir.opposite());
@@ -546,12 +533,12 @@ fn create_maze_binary(maze: &mut Grid, history: &mut MazeHistory, rng: &mut impl
 
     for y in 0..maze.height as i16 {
         for x in 0..maze.width as i16 {
-            if !maze.get_tile(Point::new(x, y)).carveable() {
+            if !maze[(x, y)].carveable() {
                 continue;
             }
 
-            let north_open: bool = y > 0 && !maze.get_tile(Point::new(x, y - 1)).uncarveable();
-            let west_open: bool = x > 0 && !maze.get_tile(Point::new(x - 1, y)).uncarveable();
+            let north_open: bool = y > 0 && !maze[(x, y - 1)].uncarveable();
+            let west_open: bool = x > 0 && !maze[(x - 1, y)].uncarveable();
 
             let dir: u8 = if west_open && north_open {
                 rng.gen_range(0..=1)
@@ -564,18 +551,18 @@ fn create_maze_binary(maze: &mut Grid, history: &mut MazeHistory, rng: &mut impl
             };
 
             if dir == 0 {
-                maze.get_tile_mut(Point::new(x, y)).connect(West);
+                maze[(x, y)].connect(West);
                 history.carve(Point::new(x, y), West);
-                maze.get_tile_mut(Point::new(x - 1, y)).connect(East);
+                maze[(x - 1, y)].connect(East);
             } else if dir == 1 {
-                maze.get_tile_mut(Point::new(x, y)).connect(North);
+                maze[(x, y)].connect(North);
                 history.carve(Point::new(x, y), North);
-                maze.get_tile_mut(Point::new(x, y - 1)).connect(South);
+                maze[(x, y - 1)].connect(South);
             } else {
                 history.carve(Point::new(x, y), NoDir);
             }
 
-            maze.get_tile_mut(Point::new(x, y)).status = ConnectionStatus::InMaze;
+            maze[(x, y)].status = ConnectionStatus::InMaze;
         }
     }
 }
@@ -588,20 +575,19 @@ fn create_maze_sidewinder(
 ) {
     use crate::maze::Direction as D;
 
-    maze.get_tile_mut(Point::new(0, 0)).connect(D::East);
-    maze.get_tile_mut(Point::new(0, 0)).status = ConnectionStatus::InMaze;
+    maze[(0, 0)].connect(D::East);
+    maze[(0, 0)].status = ConnectionStatus::InMaze;
     history.carve(Point::new(0, 0), D::NoDir);
 
     for x in 1..(maze.width - 1) as i16 {
-        maze.get_tile_mut(Point::new(x, 0)).connections |= D::East as u8 | D::West as u8;
-        maze.get_tile_mut(Point::new(x, 0)).status = ConnectionStatus::InMaze;
+        maze[(x, 0)].connections |= D::East as u8 | D::West as u8;
+        maze[(x, 0)].status = ConnectionStatus::InMaze;
         history.carve(Point::new(x, 0), D::West);
     }
 
-    maze.get_tile_mut(Point::new((maze.width - 1) as i16, 0))
-        .connect(D::West);
-    maze.get_tile_mut(Point::new((maze.width - 1) as i16, 0))
-        .status = ConnectionStatus::InMaze;
+    let end = ((maze.width - 1) as i16, 0);
+    maze[end].connect(D::West);
+    maze[end].status = ConnectionStatus::InMaze;
     history.carve(Point::new((maze.width - 1) as i16, 0), D::West);
 
     for y in 1..maze.height as i16 {
@@ -626,10 +612,10 @@ fn create_maze_sidewinder(
                 y,
             );
             let mut pos = Point::new(range_start as i16, y);
-            maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
+            maze[pos].status = ConnectionStatus::InMaze;
 
             for _ in 1..range_len {
-                maze.get_tile_mut(pos).connect(D::East);
+                maze[pos].connect(D::East);
 
                 if wrap.is_some() {
                     pos = pos.travel_wrapped(D::East, maze.width, maze.height);
@@ -637,13 +623,12 @@ fn create_maze_sidewinder(
                     pos = pos.travel(D::East);
                 }
 
-                maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
-                maze.get_tile_mut(pos).connect(D::West);
+                maze[pos].status = ConnectionStatus::InMaze;
+                maze[pos].connect(D::West);
             }
 
-            maze.get_tile_mut(vert_pos).connect(D::North);
-            maze.get_tile_mut(vert_pos.travel(D::North))
-                .connect(D::South);
+            maze[vert_pos].connect(D::North);
+            maze[vert_pos.travel(D::North)].connect(D::South);
             range_start = (range_start + range_len) % maze.width;
             cells_added += range_len;
         }
@@ -674,7 +659,7 @@ fn create_maze_growingtree(
 ) {
     let mut open: Vec<Point> = Vec::new();
 
-    maze.get_tile_mut(start_pos).status = ConnectionStatus::InMaze;
+    maze[start_pos].status = ConnectionStatus::InMaze;
     history.add_cell(start_pos);
     open.push(start_pos);
 
@@ -694,7 +679,7 @@ fn create_maze_growingtree(
         };
         let next = adj
             .enumerate()
-            .filter(|&(_, x)| maze.contains(x) && maze.get_tile(x).carveable())
+            .filter(|&(_, x)| maze.contains(x) && maze[x].carveable())
             .collect::<Vec<(usize, Point)>>()
             .choose(rng)
             .copied();
@@ -705,11 +690,11 @@ fn create_maze_growingtree(
             }
             Some(next) => {
                 let dir = Direction::from_clock_cardinal(next.0 as u8);
-                maze.get_tile_mut(selected).connect(dir);
+                maze[selected].connect(dir);
 
                 let selected = next.1;
-                maze.get_tile_mut(selected).connect(dir.opposite());
-                maze.get_tile_mut(selected).status = ConnectionStatus::InMaze;
+                maze[selected].connect(dir.opposite());
+                maze[selected].status = ConnectionStatus::InMaze;
 
                 open.push(selected);
                 history.carve(selected, dir.opposite());
@@ -732,7 +717,7 @@ fn create_maze_wilson(
     let mut reservoir_index = 0;
     let mut anchor: Point = reservoir[reservoir_index];
 
-    maze.get_tile_mut(anchor).status = ConnectionStatus::InMaze;
+    maze[anchor].status = ConnectionStatus::InMaze;
     if log_temps {
         history.place_marker(anchor);
     } else {
@@ -741,7 +726,7 @@ fn create_maze_wilson(
 
     'outer: loop {
         // pick a cell not already in the maze
-        while !maze.get_tile(anchor).carveable() {
+        while !maze[anchor].carveable() {
             reservoir_index += 1;
             if reservoir_index >= reservoir.len() {
                 break 'outer;
@@ -756,21 +741,21 @@ fn create_maze_wilson(
         }
 
         // start a random loop erased walk from the chosen cell
-        while maze.get_tile(pos).status == ConnectionStatus::UnVisited {
+        while maze[pos].status == ConnectionStatus::UnVisited {
             let adj = match wrap {
                 Some(w) => pos.adjacent_wrapped(w, maze.width, maze.height),
                 None => pos.adjacent(),
             };
             let next = adj
                 .enumerate()
-                .filter(|&(_, x)| maze.contains(x) && !maze.get_tile(x).uncarveable())
+                .filter(|&(_, x)| maze.contains(x) && !maze[x].uncarveable())
                 .collect::<Vec<(usize, Point)>>()
                 .choose(rng)
                 .copied()
                 .unwrap(); // safe to unwrap because a cell will always have at least 1 adjacent cell in the maze (as long as there is more than 1 cell in the region)
 
             let dir = Direction::from_clock_cardinal(next.0 as u8);
-            maze.get_tile_mut(pos).set_connected(dir);
+            maze[pos].set_connected(dir);
             if log_temps {
                 history.move_marker_temp(dir);
             }
@@ -783,11 +768,11 @@ fn create_maze_wilson(
         if log_temps {
             history.replace_marker(pos);
         }
-        while maze.get_tile(pos).status != ConnectionStatus::InMaze {
+        while maze[pos].status != ConnectionStatus::InMaze {
             // this line will panic if tile has multiple connections
-            let temp_dir = maze.get_tile(pos).connections.into();
-            maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
-            maze.get_tile_mut(pos).connect(dir.opposite());
+            let temp_dir = maze[pos].connections.into();
+            maze[pos].status = ConnectionStatus::InMaze;
+            maze[pos].connect(dir.opposite());
             dir = temp_dir;
 
             if log_temps {
@@ -801,7 +786,7 @@ fn create_maze_wilson(
                 pos = pos.travel(dir);
             }
         }
-        maze.get_tile_mut(pos).connect(dir.opposite());
+        maze[pos].connect(dir.opposite());
         if log_temps {
             //history.remove_marker();
             history.remove_temp_cells();
@@ -824,22 +809,18 @@ fn create_maze_kruskal(
     for y in 0..maze.height as i16 {
         for x in 0..maze.width as i16 {
             let pos = Point::new(x, y);
-            if maze.get_tile(pos).uncarveable() {
+            if maze[pos].uncarveable() {
                 continue;
             }
 
             if (wrap == Some(MazeWrap::Full) || wrap == Some(MazeWrap::Horizontal) || x > 0)
-                && maze
-                    .get_tile(pos.travel_wrapped(Direction::West, maze.width, maze.height))
-                    .carveable()
+                && maze[pos.travel_wrapped(Direction::West, maze.width, maze.height)].carveable()
             {
                 edges.push((pos, Direction::West));
             }
 
             if (wrap == Some(MazeWrap::Full) || wrap == Some(MazeWrap::Vertical) || y > 0)
-                && maze
-                    .get_tile(pos.travel_wrapped(Direction::North, maze.width, maze.height))
-                    .carveable()
+                && maze[pos.travel_wrapped(Direction::North, maze.width, maze.height)].carveable()
             {
                 edges.push((pos, Direction::North));
             }
@@ -862,17 +843,17 @@ fn create_maze_kruskal(
             maze.get_index(node1),
             maze.get_index(node2),
         ) {
-            if maze.get_tile(node1).status != ConnectionStatus::InMaze {
-                maze.get_tile_mut(node1).status = ConnectionStatus::InMaze;
+            if maze[node1].status != ConnectionStatus::InMaze {
+                maze[node1].status = ConnectionStatus::InMaze;
             }
             history.carve(edge.0, edge.1);
-            maze.get_tile_mut(node1).connect(edge.1);
+            maze[node1].connect(edge.1);
 
-            if maze.get_tile(node2).status != ConnectionStatus::InMaze {
-                maze.get_tile_mut(node2).status = ConnectionStatus::InMaze;
+            if maze[node2].status != ConnectionStatus::InMaze {
+                maze[node2].status = ConnectionStatus::InMaze;
                 history.add_cell(node2);
             }
-            maze.get_tile_mut(node2).connect(edge.1.opposite());
+            maze[node2].connect(edge.1.opposite());
         }
     }
 }
@@ -922,7 +903,7 @@ fn create_maze_prim_true(
 ) {
     let mut open: Vec<(Point, Direction)> = Vec::new();
 
-    maze.get_tile_mut(start_pos).status = ConnectionStatus::InMaze;
+    maze[start_pos].status = ConnectionStatus::InMaze;
     history.add_cell(start_pos);
 
     match wrap {
@@ -930,7 +911,7 @@ fn create_maze_prim_true(
         None => start_pos.adjacent(),
     }
     .enumerate()
-    .filter(|&(_, p)| maze.contains(p) && maze.get_tile(p).carveable())
+    .filter(|&(_, p)| maze.contains(p) && maze[p].carveable())
     .for_each(|(i, p)| {
         open.push((p, Direction::from_clock_cardinal(i as u8).opposite()));
         history.carve_temp(p, Direction::from_clock_cardinal(i as u8).opposite());
@@ -939,12 +920,12 @@ fn create_maze_prim_true(
     while !open.is_empty() {
         let edge = open.swap_remove(rng.gen_range(0..open.len()));
 
-        if maze.get_tile(edge.0).status != ConnectionStatus::UnVisited {
+        if maze[edge.0].status != ConnectionStatus::UnVisited {
             continue;
         }
 
-        maze.get_tile_mut(edge.0).status = ConnectionStatus::InMaze;
-        maze.get_tile_mut(edge.0).connect(edge.1);
+        maze[edge.0].status = ConnectionStatus::InMaze;
+        maze[edge.0].connect(edge.1);
 
         history.carve(edge.0, edge.1);
 
@@ -953,14 +934,14 @@ fn create_maze_prim_true(
         } else {
             edge.0.travel(edge.1)
         };
-        maze.get_tile_mut(target).connect(edge.1.opposite());
+        maze[target].connect(edge.1.opposite());
 
         match wrap {
             Some(w) => edge.0.adjacent_wrapped(w, maze.width, maze.height),
             None => edge.0.adjacent(),
         }
         .enumerate()
-        .filter(|&(_, p)| maze.contains(p) && maze.get_tile(p).carveable())
+        .filter(|&(_, p)| maze.contains(p) && maze[p].carveable())
         .for_each(|(i, p)| {
             open.push((p, Direction::from_clock_cardinal(i as u8).opposite()));
             history.carve_temp(p, Direction::from_clock_cardinal(i as u8).opposite());
@@ -1141,7 +1122,7 @@ fn flood_tile_prim(maze: &mut Grid, noise_map: &[u8], mut pos: Point, rng: &mut 
                 .enumerate()
                 .filter(|&(_, x)| {
                     maze.contains(x)
-                        && maze.get_tile(x).status == ConnectionStatus::UnVisited
+                        && maze[x].status == ConnectionStatus::UnVisited
                         && noise_map[(x.x + x.y * maze.width as i16) as usize] == 1
                 })
                 .collect::<Vec<(usize, Point)>>()
@@ -1155,11 +1136,11 @@ fn flood_tile_prim(maze: &mut Grid, noise_map: &[u8], mut pos: Point, rng: &mut 
             }
             Some(next) => {
                 let dir = Direction::from_clock_cardinal(next.0 as u8);
-                maze.get_tile_mut(pos).connect(dir);
+                maze[pos].connect(dir);
 
                 pos = next.1;
-                maze.get_tile_mut(pos).connect(dir.opposite());
-                maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
+                maze[pos].connect(dir.opposite());
+                maze[pos].status = ConnectionStatus::InMaze;
 
                 open_tiles.push(pos);
             }
@@ -1183,7 +1164,7 @@ fn flood_tile_backtrack(maze: &mut Grid, noise_map: &[u8], mut pos: Point, rng: 
     let mut tile_stack: Vec<Point> = Vec::new();
 
     tile_stack.push(pos);
-    maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
+    maze[pos].status = ConnectionStatus::InMaze;
 
     while !tile_stack.is_empty() {
         let next = pick_random(
@@ -1191,7 +1172,7 @@ fn flood_tile_backtrack(maze: &mut Grid, noise_map: &[u8], mut pos: Point, rng: 
                 .enumerate()
                 .filter(|&(_, x)| {
                     maze.contains(x)
-                        && maze.get_tile(x).status == ConnectionStatus::UnVisited
+                        && maze[x].status == ConnectionStatus::UnVisited
                         && noise_map[(x.x + x.y * maze.width as i16) as usize] == 1
                 })
                 .collect::<Vec<(usize, Point)>>()
@@ -1206,11 +1187,11 @@ fn flood_tile_backtrack(maze: &mut Grid, noise_map: &[u8], mut pos: Point, rng: 
             }
             Some(next) => {
                 let dir = Direction::from_clock_cardinal(next.0 as u8);
-                maze.get_tile_mut(pos).connect(dir);
+                maze[pos].connect(dir);
 
                 pos = next.1;
-                maze.get_tile_mut(pos).connect(dir.opposite());
-                maze.get_tile_mut(pos).status = ConnectionStatus::InMaze;
+                maze[pos].connect(dir.opposite());
+                maze[pos].status = ConnectionStatus::InMaze;
 
                 tile_stack.push(pos);
             }

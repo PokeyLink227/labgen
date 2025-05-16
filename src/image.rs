@@ -375,7 +375,7 @@ pub fn generate_png(maze: &Grid, opts: &ImageOptions) {
 
     for py in 0..maze.height {
         for px in 0..maze.width {
-            let tile = maze.get_tile(Point::new(px as i16, py as i16));
+            let tile = maze[(px as i16, py as i16)];
             if !(tile.status == ConnectionStatus::InMaze || tile.status == ConnectionStatus::Room) {
                 continue;
             }
@@ -447,7 +447,7 @@ pub fn generate_svg(maze: &Grid, opts: &ImageOptions) {
 
     for y in 0..maze.height {
         for x in 0..maze.width {
-            let tile = maze.get_tile(Point::new(x as i16, y as i16));
+            let tile = maze[(x as i16, y as i16)];
 
             if tile.status == ConnectionStatus::Removed {
                 let _ = buf.write(

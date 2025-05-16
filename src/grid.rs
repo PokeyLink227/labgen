@@ -3,7 +3,8 @@ use regex::Regex;
 use std::{
     array,
     cell::LazyCell,
-    ops::{Add, AddAssign},
+    fmt::Display,
+    ops::{Add, AddAssign, Index, IndexMut},
     str::FromStr,
 };
 
@@ -31,9 +32,21 @@ impl AddAssign for Point {
     }
 }
 
-impl std::fmt::Display for Point {
+impl Display for Point {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({}, {})", self.x, self.y)
+    }
+}
+
+impl From<(i16, i16)> for Point {
+    fn from(val: (i16, i16)) -> Point {
+        Point { x: val.0, y: val.1 }
+    }
+}
+
+impl From<Point> for (i16, i16) {
+    fn from(val: Point) -> (i16, i16) {
+        (val.x, val.y)
     }
 }
 
@@ -267,19 +280,20 @@ impl Grid {
     pub fn contains(&self, pt: Point) -> bool {
         pt.x >= 0 && (pt.x as u16) < self.width && pt.y >= 0 && (pt.y as u16) < self.height
     }
+}
 
-    pub fn get_tile(&self, pos: Point) -> Tile {
-        assert!(self.contains(pos), "{:?} out of bounds", pos);
-        self.tiles[pos.x as usize + pos.y as usize * self.width as usize]
+impl<P: Into<Point>> Index<P> for Grid {
+    type Output = Tile;
+
+    fn index(&self, pos: P) -> &Self::Output {
+        let pos = pos.into();
+        &self.tiles[pos.x as usize + pos.y as usize * self.width as usize]
     }
+}
 
-    pub fn get_tile_mut(&mut self, pos: Point) -> &mut Tile {
-        assert!(self.contains(pos), "{:?} out of bounds", pos);
+impl<P: Into<Point>> IndexMut<P> for Grid {
+    fn index_mut(&mut self, pos: P) -> &mut Tile {
+        let pos = pos.into();
         &mut self.tiles[pos.x as usize + pos.y as usize * self.width as usize]
-    }
-
-    pub fn set_tile(&mut self, pos: Point, new: Tile) {
-        assert!(self.contains(pos), "{:?} out of bounds", pos);
-        self.tiles[pos.x as usize + pos.y as usize * self.width as usize] = new;
     }
 }
