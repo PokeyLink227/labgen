@@ -61,10 +61,11 @@ fn pick_random(points: &[(usize, Point)], rng: &mut impl Rng) -> Option<(usize, 
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug)]
 pub enum MazeGenError {
     MazeText(MazeTextError),
     ParseRectError,
+    IoError(std::io::Error),
 }
 
 impl From<MazeTextError> for MazeGenError {
@@ -76,6 +77,12 @@ impl From<MazeTextError> for MazeGenError {
 impl From<ParseRectError> for MazeGenError {
     fn from(_err: ParseRectError) -> MazeGenError {
         MazeGenError::ParseRectError
+    }
+}
+
+impl From<std::io::Error> for MazeGenError {
+    fn from(err: std::io::Error) -> MazeGenError {
+        MazeGenError::IoError(err)
     }
 }
 

@@ -118,7 +118,7 @@ pub fn generate_gif(
     rooms: &[Rect],
     opts: &ImageOptions,
     ani_opts: &AnimationOptions,
-) {
+) -> Result<(), std::io::Error> {
     let cell_width: u16 = opts.passage_width + opts.wall_width;
 
     let (width, height) = (
@@ -128,7 +128,7 @@ pub fn generate_gif(
 
     let mut state: Vec<u8> = vec![0; width as usize * height as usize];
     let mut image =
-        BufWriter::new(File::create(format!("{}.gif", &opts.file_path).as_str()).unwrap());
+        BufWriter::new(File::create(format!("{}.gif", &opts.file_path).as_str())?);
     let mut encoder = Encoder::new(&mut image, width, height, &opts.color_map).unwrap();
     encoder.set_repeat(Repeat::Infinite).unwrap();
 
@@ -260,6 +260,8 @@ pub fn generate_gif(
     frame.delay = ani_opts.pause_time;
     frame.buffer = Cow::Borrowed(&state);
     encoder.write_frame(&frame).unwrap();
+
+    Ok(())
 }
 
 pub fn generate_gif_compressed(
@@ -268,7 +270,7 @@ pub fn generate_gif_compressed(
     rooms: &[Rect],
     opts: &ImageOptions,
     ani_opts: &AnimationOptions,
-) {
+) -> Result<(), std::io::Error> {
     let cell_width: u16 = opts.passage_width + opts.wall_width;
 
     let (width, height) = (
@@ -282,7 +284,7 @@ pub fn generate_gif_compressed(
     let blank_cell: Vec<u8> = vec![0; (cell_width * cell_width) as usize];
 
     let mut image =
-        BufWriter::new(File::create(format!("{}.gif", &opts.file_path).as_str()).unwrap());
+        BufWriter::new(File::create(format!("{}.gif", &opts.file_path).as_str())?);
     let mut encoder = Encoder::new(&mut image, width, height, &opts.color_map).unwrap();
     encoder.set_repeat(Repeat::Infinite).unwrap();
 
@@ -347,16 +349,18 @@ pub fn generate_gif_compressed(
     frame.delay = ani_opts.pause_time;
     frame.buffer = Cow::Borrowed(&[0]);
     encoder.write_frame(&frame).unwrap();
+
+    Ok(())
 }
 
-pub fn generate_png(maze: &Grid, opts: &ImageOptions) {
+pub fn generate_png(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Error> {
     let cell_width: u16 = opts.passage_width + opts.wall_width;
     let (width, height) = (
         maze.width * cell_width + opts.wall_width,
         maze.height * cell_width + opts.wall_width,
     );
 
-    let file = File::create(format!("{}.png", &opts.file_path).as_str()).unwrap();
+    let file = File::create(format!("{}.png", &opts.file_path).as_str())?;
     let writer = &mut BufWriter::new(file);
 
     let mut encoder = png::Encoder::new(writer, width as u32, height as u32);
@@ -430,36 +434,38 @@ pub fn generate_png(maze: &Grid, opts: &ImageOptions) {
         }
     }
 
-    writer.write_image_data(&pixels).unwrap();
+    writer.write_image_data(&pixels)?;
+
+    Ok(())
 }
 
-pub fn generate_svg(maze: &Grid, opts: &ImageOptions) {
-    let file = File::create(format!("{}.svg", &opts.file_path).as_str()).unwrap();
+pub fn generate_svg(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Error> {
+    let file = File::create(format!("{}.svg", &opts.file_path).as_str())?;
     let mut buf = BufWriter::new(file);
 
-    let _ = buf.write(
+    buf.write(
         format!(
             "<svg viewBox=\"-1 -1 {} {}\" xmlns=\"http://www.w3.org/2000/svg\" stroke=\"black\" stroke-width=\"0.25\" stroke-linecap=\"square\" shape-rendering=\"crispEdges\">",
             maze.width + 2,
             maze.height + 2,
         ).as_bytes()
-    );
+    )?;
 
     for y in 0..maze.height {
         for x in 0..maze.width {
             let tile = maze[(x as i16, y as i16)];
 
             if tile.status == ConnectionStatus::Removed {
-                let _ = buf.write(
+                buf.write(
                     format!(
                         "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\"/>",
                         x, y, 1, 1
                     )
                     .as_bytes(),
-                );
+                )?;
             } else {
                 if !tile.connected(Direction::North) {
-                    let _ = buf.write(
+                    buf.write(
                         format!(
                             "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\"/>",
                             x,
@@ -468,10 +474,10 @@ pub fn generate_svg(maze: &Grid, opts: &ImageOptions) {
                             y
                         )
                         .as_bytes(),
-                    );
+                    )?;
                 }
                 if !tile.connected(Direction::West) {
-                    let _ = buf.write(
+                    buf.write(
                         format!(
                             "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\"/>",
                             x,
@@ -480,27 +486,29 @@ pub fn generate_svg(maze: &Grid, opts: &ImageOptions) {
                             y + 1
                         )
                         .as_bytes(),
-                    );
+                    )?;
                 }
             }
         }
     }
 
-    let _ = buf.write(
+    buf.write(
         format!(
             "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\"/>",
             maze.width, 0, maze.width, maze.height,
         )
         .as_bytes(),
-    );
+    )?;
 
-    let _ = buf.write(
+    buf.write(
         format!(
             "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\"/>",
             0, maze.height, maze.width, maze.height,
         )
         .as_bytes(),
-    );
+    )?;
 
-    let _ = buf.write(b"</svg>");
+    buf.write(b"</svg>")?;
+
+    Ok(())
 }

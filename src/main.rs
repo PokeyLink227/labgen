@@ -188,7 +188,7 @@ fn main() -> Result<(), MazeGenError> {
             Some(ImageFormat::Svg) => generate_svg(&nodes, &opts),
             // try to infer format
             None => generate_png(&nodes, &opts),
-        }
+        }?
     }
     let image_time = now.elapsed();
 
