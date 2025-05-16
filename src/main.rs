@@ -8,7 +8,7 @@ use crate::{
     mazetext::MazeText,
 };
 use clap::Parser;
-use rand::{SeedableRng, rngs::StdRng};
+use rand::{SeedableRng, rngs::SmallRng};
 use std::{str::FromStr, time::Instant};
 
 mod grid;
@@ -143,7 +143,7 @@ fn main() -> Result<(), MazeGenError> {
     };
 
     let seed: u64 = args.seed.unwrap_or(rand::random::<u64>());
-    let mut rng: StdRng = StdRng::seed_from_u64(seed);
+    let mut rng = SmallRng::seed_from_u64(seed);
     println!("seed: {}", seed);
 
     let mut now = Instant::now();
