@@ -21,13 +21,13 @@ impl<'a> MazeText<'a> {
 
         let caps = re.captures(s).ok_or(MazeTextError::CouldntParseText)?;
 
-        return Ok(MazeText(
+        Ok(MazeText(
             Point::new(
                 caps[1].parse().or(Err(MazeTextError::CouldntParseText))?,
                 caps[2].parse().or(Err(MazeTextError::CouldntParseText))?,
             ),
             caps.get(3).unwrap().as_str(),
-        ));
+        ))
     }
 }
 
@@ -73,7 +73,7 @@ impl MazeFont {
         };
 
         // read in the symbols from the image
-        for (i, &b) in bytes.into_iter().enumerate() {
+        for (i, &b) in bytes.iter().enumerate() {
             font.symbols[(i & 0b0_00011111) + (i >> 5) / 9 * 32].pixels[(i >> 5) % 9] = b;
         }
 

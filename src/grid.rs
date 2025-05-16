@@ -151,12 +151,12 @@ impl FromStr for Rect {
 
         let caps = re.captures(s).ok_or(ParseRectError)?;
 
-        return Ok(Rect {
+        Ok(Rect {
             x: caps[1].parse().or(Err(ParseRectError))?,
             y: caps[2].parse().or(Err(ParseRectError))?,
             w: caps[3].parse().or(Err(ParseRectError))?,
             h: caps[4].parse().or(Err(ParseRectError))?,
-        });
+        })
     }
 }
 
@@ -173,7 +173,7 @@ pub enum ConnectionStatus {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Direction {
-    NoDir = 0b0000,
+    NoDir = 0b00000000,
     North = 0b00000001,
     NorthEast = 0b00000010,
     East = 0b00000100,
@@ -203,8 +203,9 @@ impl From<u8> for Direction {
 impl Direction {
     pub fn opposite(self) -> Self {
         // only needed to mask when there were 4 bits being used
-        // ((((self as u8) << 4) | ((self as u8) >> 4)) & 0b11111111).into()
-        (((self as u8) << 4) | ((self as u8) >> 4)).into()
+        // v1: ((((self as u8) << 4) | ((self as u8) >> 4)) & 0b11111111).into()
+        // v2: (((self as u8) << 4) | ((self as u8) >> 4)).into()
+        (self as u8).rotate_right(4).into()
     }
 
     // constructs a direction by starting at north and rotation clockwise

@@ -127,8 +127,7 @@ pub fn generate_gif(
     );
 
     let mut state: Vec<u8> = vec![0; width as usize * height as usize];
-    let mut image =
-        BufWriter::new(File::create(format!("{}.gif", &opts.file_path).as_str())?);
+    let mut image = BufWriter::new(File::create(format!("{}.gif", &opts.file_path).as_str())?);
     let mut encoder = Encoder::new(&mut image, width, height, &opts.color_map).unwrap();
     encoder.set_repeat(Repeat::Infinite).unwrap();
 
@@ -244,21 +243,25 @@ pub fn generate_gif(
 
         // generate and save frame
         if write_frame && frame_num % ani_opts.batch_size == 0 {
-            let mut frame = Frame::default();
-            frame.width = width;
-            frame.height = height;
-            frame.delay = ani_opts.frame_time;
-            frame.buffer = Cow::Borrowed(&state);
+            let frame = Frame {
+                width,
+                height,
+                delay: ani_opts.frame_time,
+                buffer: Cow::Borrowed(&state),
+                ..Frame::default()
+            };
             encoder.write_frame(&frame).unwrap();
         }
     }
 
     // final frame with a higher delay
-    let mut frame = Frame::default();
-    frame.width = width;
-    frame.height = height;
-    frame.delay = ani_opts.pause_time;
-    frame.buffer = Cow::Borrowed(&state);
+    let frame = Frame {
+        width,
+        height,
+        delay: ani_opts.pause_time,
+        buffer: Cow::Borrowed(&state),
+        ..Frame::default()
+    };
     encoder.write_frame(&frame).unwrap();
 
     Ok(())
@@ -283,30 +286,33 @@ pub fn generate_gif_compressed(
     let connected_cell: Vec<u8> = vec![1; (cell_width * cell_width) as usize];
     let blank_cell: Vec<u8> = vec![0; (cell_width * cell_width) as usize];
 
-    let mut image =
-        BufWriter::new(File::create(format!("{}.gif", &opts.file_path).as_str())?);
+    let mut image = BufWriter::new(File::create(format!("{}.gif", &opts.file_path).as_str())?);
     let mut encoder = Encoder::new(&mut image, width, height, &opts.color_map).unwrap();
     encoder.set_repeat(Repeat::Infinite).unwrap();
 
     // initial frame to set background
-    let mut frame = Frame::default();
-    frame.width = width;
-    frame.height = height;
-    frame.delay = 0;
-    frame.buffer = Cow::Borrowed(&empty_maze);
+    let frame = Frame {
+        width,
+        height,
+        delay: 0,
+        buffer: Cow::Borrowed(&empty_maze),
+        ..Frame::default()
+    };
     encoder.write_frame(&frame).unwrap();
 
     // add rooms to maze
     for r in rooms {
-        let mut frame = Frame::default();
-        frame.delay = ani_opts.frame_time;
-        frame.width = r.w as u16 * cell_width - opts.wall_width;
-        frame.height = r.h as u16 * cell_width - opts.wall_width;
-        frame.top = r.y as u16 * cell_width + opts.wall_width;
-        frame.left = r.x as u16 * cell_width + opts.wall_width;
+        let frame = Frame {
+            delay: ani_opts.frame_time,
+            width: r.w as u16 * cell_width - opts.wall_width,
+            height: r.h as u16 * cell_width - opts.wall_width,
+            top: r.y as u16 * cell_width + opts.wall_width,
+            left: r.x as u16 * cell_width + opts.wall_width,
+            buffer: Cow::Borrowed(&full_maze),
+            dispose: DisposalMethod::Keep,
+            ..Frame::default()
+        };
 
-        frame.buffer = Cow::Borrowed(&full_maze);
-        frame.dispose = DisposalMethod::Keep;
         encoder.write_frame(&frame).unwrap();
     }
 
@@ -316,15 +322,15 @@ pub fn generate_gif_compressed(
             MazeAction::Remove(pt, dir) => (pt, dir, &blank_cell),
             _ => todo!(),
         };
-        let mut frame = Frame::default();
-        frame.delay = ani_opts.frame_time;
-
+        let mut frame = Frame {
+            delay: ani_opts.frame_time,
+            buffer: Cow::Borrowed(cell_filling),
+            dispose: DisposalMethod::Keep,
+            ..Frame::default()
+        };
         // set dimensions and position of frame
         (frame.top, frame.left, frame.width, frame.height) =
             get_bounds(pt, dir, cell_width, opts.passage_width, opts.wall_width);
-
-        frame.buffer = Cow::Borrowed(cell_filling);
-        frame.dispose = DisposalMethod::Keep;
         encoder.write_frame(&frame).unwrap();
 
         if !maze.contains(pt.travel(dir)) {
@@ -342,12 +348,14 @@ pub fn generate_gif_compressed(
     }
 
     // final empty frame with a higher delay
-    let mut frame = Frame::default();
-    frame.width = 1;
-    frame.height = 1;
-    frame.dispose = DisposalMethod::Keep;
-    frame.delay = ani_opts.pause_time;
-    frame.buffer = Cow::Borrowed(&[0]);
+    let frame = Frame {
+        width: 1,
+        height: 1,
+        dispose: DisposalMethod::Keep,
+        delay: ani_opts.pause_time,
+        buffer: Cow::Borrowed(&[0]),
+        ..Frame::default()
+    };
     encoder.write_frame(&frame).unwrap();
 
     Ok(())
@@ -443,7 +451,7 @@ pub fn generate_svg(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Err
     let file = File::create(format!("{}.svg", &opts.file_path).as_str())?;
     let mut buf = BufWriter::new(file);
 
-    buf.write(
+    buf.write_all(
         format!(
             "<svg viewBox=\"-1 -1 {} {}\" xmlns=\"http://www.w3.org/2000/svg\" stroke=\"black\" stroke-width=\"0.25\" stroke-linecap=\"square\" shape-rendering=\"crispEdges\">",
             maze.width + 2,
@@ -456,7 +464,7 @@ pub fn generate_svg(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Err
             let tile = maze[(x as i16, y as i16)];
 
             if tile.status == ConnectionStatus::Removed {
-                buf.write(
+                buf.write_all(
                     format!(
                         "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\"/>",
                         x, y, 1, 1
@@ -465,7 +473,7 @@ pub fn generate_svg(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Err
                 )?;
             } else {
                 if !tile.connected(Direction::North) {
-                    buf.write(
+                    buf.write_all(
                         format!(
                             "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\"/>",
                             x,
@@ -477,7 +485,7 @@ pub fn generate_svg(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Err
                     )?;
                 }
                 if !tile.connected(Direction::West) {
-                    buf.write(
+                    buf.write_all(
                         format!(
                             "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\"/>",
                             x,
@@ -492,7 +500,7 @@ pub fn generate_svg(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Err
         }
     }
 
-    buf.write(
+    buf.write_all(
         format!(
             "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\"/>",
             maze.width, 0, maze.width, maze.height,
@@ -500,7 +508,7 @@ pub fn generate_svg(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Err
         .as_bytes(),
     )?;
 
-    buf.write(
+    buf.write_all(
         format!(
             "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\"/>",
             0, maze.height, maze.width, maze.height,
@@ -508,7 +516,7 @@ pub fn generate_svg(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Err
         .as_bytes(),
     )?;
 
-    buf.write(b"</svg>")?;
+    buf.write_all(b"</svg>")?;
 
     Ok(())
 }
