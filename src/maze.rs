@@ -39,9 +39,16 @@ pub enum MazeType {
 #[repr(u8)]
 pub enum MazeWrap {
     #[default]
-    Full,
-    Horizontal,
-    Vertical,
+    Full = 0b11,
+    Horizontal = 0b01,
+    Vertical = 0b10,
+    None = 0b00,
+}
+
+impl MazeWrap {
+    fn check(self, other: MazeWrap) -> bool {
+        (self as u8 & other as u8) != 0
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -90,7 +97,7 @@ pub fn generate_maze(
     width: u16,
     height: u16,
     mtype: MazeType,
-    wrap: Option<MazeWrap>,
+    wrap: MazeWrap,
     rooms: &[Rect],
     exclusions: &[Rect],
     text: &[MazeText],
@@ -175,9 +182,10 @@ pub fn generate_maze(
                 continue;
             }
 
-            if (wrap == Some(MazeWrap::Full) || wrap == Some(MazeWrap::Horizontal) || x > 0)
-                && maze[pos.travel_wrapped(Direction::West, maze.width, maze.height)].status
-                    == status
+            if (wrap.check(MazeWrap::Horizontal) || x > 0)
+                && ((status == ConnectionStatus::Room && maze[pos].connected(Direction::West))
+                    || (maze[pos.travel_wrapped(Direction::West, maze.width, maze.height)].status
+                        == status))
             {
                 merge_sets(
                     &mut region_map,
@@ -186,9 +194,10 @@ pub fn generate_maze(
                 );
             }
 
-            if (wrap == Some(MazeWrap::Full) || wrap == Some(MazeWrap::Vertical) || y > 0)
-                && maze[pos.travel_wrapped(Direction::North, maze.width, maze.height)].status
-                    == status
+            if (wrap.check(MazeWrap::Vertical) || y > 0)
+                && ((status == ConnectionStatus::Room && maze[pos].connected(Direction::North))
+                    || (maze[pos.travel_wrapped(Direction::North, maze.width, maze.height)].status
+                        == status))
             {
                 merge_sets(
                     &mut region_map,
@@ -342,8 +351,8 @@ pub fn generate_maze(
             for x in 0..room.w {
                 let pos = Point::new(room.x + x, room.y + y);
                 let adj = match wrap {
-                    Some(w) => pos.adjacent_wrapped(w, maze.width, maze.height),
-                    None => pos.adjacent(),
+                    MazeWrap::None => pos.adjacent(),
+                    w => pos.adjacent_wrapped(w, maze.width, maze.height),
                 };
                 adj.enumerate()
                     .filter(|&(_, x)| {
@@ -359,7 +368,7 @@ pub fn generate_maze(
     edges.shuffle(rng);
     for e in edges {
         let node1 = e.0;
-        let node2 = if wrap.is_some() {
+        let node2 = if wrap != MazeWrap::None {
             e.0.travel_wrapped(e.1, maze.width, maze.height)
         } else {
             e.0.travel(e.1)
@@ -428,7 +437,7 @@ pub fn generate_maze(
 fn create_maze_backtrack(
     maze: &mut Grid,
     start_pos: Point,
-    wrap: Option<MazeWrap>,
+    wrap: MazeWrap,
     log_temps: bool,
     history: &mut MazeHistory,
     rng: &mut impl Rng,
@@ -450,8 +459,8 @@ fn create_maze_backtrack(
         pos = stack.last().unwrap().0;
 
         let adj = match wrap {
-            Some(w) => pos.adjacent_wrapped(w, maze.width, maze.height),
-            None => pos.adjacent(),
+            MazeWrap::None => pos.adjacent(),
+            w => pos.adjacent_wrapped(w, maze.width, maze.height),
         };
         let next = adj
             .enumerate()
@@ -500,7 +509,7 @@ fn create_maze_backtrack(
 fn create_maze_prim_simple(
     maze: &mut Grid,
     start_pos: Point,
-    wrap: Option<MazeWrap>,
+    wrap: MazeWrap,
     history: &mut MazeHistory,
     rng: &mut impl Rng,
 ) {
@@ -516,8 +525,8 @@ fn create_maze_prim_simple(
         pos = open_tiles[current_tile_index];
 
         let adj = match wrap {
-            Some(w) => pos.adjacent_wrapped(w, maze.width, maze.height),
-            None => pos.adjacent(),
+            MazeWrap::None => pos.adjacent(),
+            w => pos.adjacent_wrapped(w, maze.width, maze.height),
         };
         let next = adj
             .enumerate()
@@ -584,7 +593,7 @@ fn create_maze_binary(maze: &mut Grid, history: &mut MazeHistory, rng: &mut impl
 
 fn create_maze_sidewinder(
     maze: &mut Grid,
-    wrap: Option<MazeWrap>,
+    wrap: MazeWrap,
     history: &mut MazeHistory,
     rng: &mut impl Rng,
 ) {
@@ -606,7 +615,7 @@ fn create_maze_sidewinder(
     history.carve(Point::new((maze.width - 1) as i16, 0), D::West);
 
     for y in 1..maze.height as i16 {
-        let mut range_start = if wrap.is_some() {
+        let mut range_start = if wrap != MazeWrap::None {
             rng.random_range(0..maze.width)
         } else {
             0
@@ -632,7 +641,7 @@ fn create_maze_sidewinder(
             for _ in 1..range_len {
                 maze[pos].connect(D::East);
 
-                if wrap.is_some() {
+                if wrap != MazeWrap::None {
                     pos = pos.travel_wrapped(D::East, maze.width, maze.height);
                 } else {
                     pos = pos.travel(D::East);
@@ -667,7 +676,7 @@ impl Default for GrowingTreeBias {
 fn create_maze_growingtree(
     maze: &mut Grid,
     start_pos: Point,
-    wrap: Option<MazeWrap>,
+    wrap: MazeWrap,
     bias: GrowingTreeBias,
     history: &mut MazeHistory,
     rng: &mut impl Rng,
@@ -689,8 +698,8 @@ fn create_maze_growingtree(
         };
         let selected = open[selected_index];
         let adj = match wrap {
-            Some(w) => selected.adjacent_wrapped(w, maze.width, maze.height),
-            None => selected.adjacent(),
+            MazeWrap::None => selected.adjacent(),
+            w => selected.adjacent_wrapped(w, maze.width, maze.height),
         };
         let next = adj
             .enumerate()
@@ -720,7 +729,7 @@ fn create_maze_growingtree(
 fn create_maze_wilson(
     maze: &mut Grid,
     reservoir: &[Point],
-    wrap: Option<MazeWrap>,
+    wrap: MazeWrap,
     log_temps: bool,
     history: &mut MazeHistory,
     rng: &mut impl Rng,
@@ -756,8 +765,8 @@ fn create_maze_wilson(
         // start a random loop erased walk from the chosen cell
         while maze[pos].status == ConnectionStatus::UnVisited {
             let adj = match wrap {
-                Some(w) => pos.adjacent_wrapped(w, maze.width, maze.height),
-                None => pos.adjacent(),
+                MazeWrap::None => pos.adjacent(),
+                w => pos.adjacent_wrapped(w, maze.width, maze.height),
             };
             let next = adj
                 .enumerate()
@@ -791,7 +800,7 @@ fn create_maze_wilson(
             } else {
                 history.carve(pos, dir);
             }
-            if wrap.is_some() {
+            if wrap != MazeWrap::None {
                 pos = pos.travel_wrapped(dir, maze.width, maze.height);
             } else {
                 pos = pos.travel(dir);
@@ -809,7 +818,7 @@ fn create_maze_wilson(
 // merge_sets 60x faster than simple array and 600x faster with set_lookup_flatten
 fn create_maze_kruskal(
     maze: &mut Grid,
-    wrap: Option<MazeWrap>,
+    wrap: MazeWrap,
     history: &mut MazeHistory,
     rng: &mut impl Rng,
 ) {
@@ -824,13 +833,13 @@ fn create_maze_kruskal(
                 continue;
             }
 
-            if (wrap == Some(MazeWrap::Full) || wrap == Some(MazeWrap::Horizontal) || x > 0)
+            if (wrap.check(MazeWrap::Horizontal) || x > 0)
                 && maze[pos.travel_wrapped(Direction::West, maze.width, maze.height)].carveable()
             {
                 edges.push((pos, Direction::West));
             }
 
-            if (wrap == Some(MazeWrap::Full) || wrap == Some(MazeWrap::Vertical) || y > 0)
+            if (wrap.check(MazeWrap::Vertical) || y > 0)
                 && maze[pos.travel_wrapped(Direction::North, maze.width, maze.height)].carveable()
             {
                 edges.push((pos, Direction::North));
@@ -842,7 +851,7 @@ fn create_maze_kruskal(
     // generate maze
     for edge in edges {
         let node1 = edge.0;
-        let node2 = if wrap.is_some() {
+        let node2 = if wrap != MazeWrap::None {
             edge.0.travel_wrapped(edge.1, maze.width, maze.height)
         } else {
             edge.0.travel(edge.1)
@@ -908,7 +917,7 @@ fn merge_sets(region_map: &mut [u32], lhs: usize, rhs: usize) -> bool {
 fn create_maze_prim_true(
     maze: &mut Grid,
     start_pos: Point,
-    wrap: Option<MazeWrap>,
+    wrap: MazeWrap,
     history: &mut MazeHistory,
     rng: &mut impl Rng,
 ) {
@@ -918,8 +927,8 @@ fn create_maze_prim_true(
     history.add_cell(start_pos);
 
     match wrap {
-        Some(w) => start_pos.adjacent_wrapped(w, maze.width, maze.height),
-        None => start_pos.adjacent(),
+        MazeWrap::None => start_pos.adjacent(),
+        w => start_pos.adjacent_wrapped(w, maze.width, maze.height),
     }
     .enumerate()
     .filter(|&(_, p)| maze.contains(p) && maze[p].carveable())
@@ -940,7 +949,7 @@ fn create_maze_prim_true(
 
         history.carve(edge.0, edge.1);
 
-        let target = if wrap.is_some() {
+        let target = if wrap != MazeWrap::None {
             edge.0.travel_wrapped(edge.1, maze.width, maze.height)
         } else {
             edge.0.travel(edge.1)
@@ -948,8 +957,8 @@ fn create_maze_prim_true(
         maze[target].connect(edge.1.opposite());
 
         match wrap {
-            Some(w) => edge.0.adjacent_wrapped(w, maze.width, maze.height),
-            None => edge.0.adjacent(),
+            MazeWrap::None => edge.0.adjacent(),
+            w => edge.0.adjacent_wrapped(w, maze.width, maze.height),
         }
         .enumerate()
         .filter(|&(_, p)| maze.contains(p) && maze[p].carveable())

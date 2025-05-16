@@ -83,8 +83,8 @@ struct Args {
     pause_time: u16,
 
     /// directional wrapping across buondries
-    #[arg(short = 'w', long = "wrap")]
-    wrap: Option<MazeWrap>,
+    #[arg(short = 'w', long = "wrap", default_value = "none")]
+    wrap: MazeWrap,
 
     /// remove percent% of the deadends from the maze
     #[arg(
