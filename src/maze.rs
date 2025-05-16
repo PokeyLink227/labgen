@@ -3,7 +3,7 @@ use crate::{
     history::MazeHistory,
     mazetext::{MazeFont, MazeText},
 };
-use rand::{Rng, seq::{SliceRandom, IndexedRandom}};
+use rand::{Rng, seq::{IteratorRandom, SliceRandom, IndexedRandom}};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Vector2<T> {
@@ -437,9 +437,7 @@ fn create_maze_backtrack(
         let next = adj
             .enumerate()
             .filter(|&(_, x)| maze.contains(x) && maze[x].carveable())
-            .collect::<Vec<(usize, Point)>>()
-            .choose(rng)
-            .copied();
+            .choose(rng);
 
         match next {
             None => {
@@ -505,9 +503,7 @@ fn create_maze_prim_simple(
         let next = adj
             .enumerate()
             .filter(|&(_, x)| maze.contains(x) && maze[x].carveable())
-            .collect::<Vec<(usize, Point)>>()
-            .choose(rng)
-            .copied();
+            .choose(rng);
 
         match next {
             None => {
@@ -680,9 +676,7 @@ fn create_maze_growingtree(
         let next = adj
             .enumerate()
             .filter(|&(_, x)| maze.contains(x) && maze[x].carveable())
-            .collect::<Vec<(usize, Point)>>()
-            .choose(rng)
-            .copied();
+            .choose(rng);
 
         match next {
             None => {
@@ -749,9 +743,7 @@ fn create_maze_wilson(
             let next = adj
                 .enumerate()
                 .filter(|&(_, x)| maze.contains(x) && !maze[x].uncarveable())
-                .collect::<Vec<(usize, Point)>>()
                 .choose(rng)
-                .copied()
                 .unwrap(); // safe to unwrap because a cell will always have at least 1 adjacent cell in the maze (as long as there is more than 1 cell in the region)
 
             let dir = Direction::from_clock_cardinal(next.0 as u8);
