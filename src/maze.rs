@@ -1,9 +1,12 @@
 use crate::{
-    grid::{ConnectionStatus, Direction, Grid, Point, Rect, Tile},
+    grid::{ConnectionStatus, Direction, Grid, ParseRectError, Point, Rect, Tile},
     history::MazeHistory,
-    mazetext::{MazeFont, MazeText},
+    mazetext::{MazeFont, MazeText, MazeTextError},
 };
-use rand::{Rng, seq::{IteratorRandom, SliceRandom, IndexedRandom}};
+use rand::{
+    Rng,
+    seq::{IndexedRandom, IteratorRandom, SliceRandom},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Vector2<T> {
@@ -58,6 +61,24 @@ fn pick_random(points: &[(usize, Point)], rng: &mut impl Rng) -> Option<(usize, 
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MazeGenError {
+    MazeText(MazeTextError),
+    ParseRectError,
+}
+
+impl From<MazeTextError> for MazeGenError {
+    fn from(err: MazeTextError) -> MazeGenError {
+        MazeGenError::MazeText(err)
+    }
+}
+
+impl From<ParseRectError> for MazeGenError {
+    fn from(_err: ParseRectError) -> MazeGenError {
+        MazeGenError::ParseRectError
+    }
+}
+
 pub fn generate_maze(
     width: u16,
     height: u16,
@@ -69,7 +90,7 @@ pub fn generate_maze(
     uncarve_percent: u8,
     log_temps: bool,
     rng: &mut impl Rng,
-) -> (Grid, MazeHistory) {
+) -> Result<(Grid, MazeHistory), MazeGenError> {
     let mut maze: Grid = Grid {
         tiles: vec![Tile::default(); width as usize * height as usize],
         width,
@@ -77,19 +98,10 @@ pub fn generate_maze(
     };
 
     if !text.is_empty() {
-        let font = match MazeFont::read_font("default_font.png") {
-            Ok(f) => f,
-            Err(e) => {
-                println!("Error: {:?}", e);
-                return (maze, MazeHistory::new(width, height, log_temps));
-            }
-        };
+        let font = MazeFont::read_font("default_font.png")?;
 
         for t in text {
-            if let Err(e) = font.generate_text(*t, &mut maze) {
-                println!("Error: {:?}", e);
-                return (maze, MazeHistory::new(width, height, log_temps));
-            }
+            font.generate_text(*t, &mut maze)?;
         }
     }
 
@@ -194,7 +206,7 @@ pub fn generate_maze(
     // early return to ensure maze algos always recieve a maze with at least
     // 1 unvisited cell
     if num_unvisited < 1 {
-        return (maze, MazeHistory::new(width, height, log_temps));
+        return Ok((maze, MazeHistory::new(width, height, log_temps)));
     }
 
     // holds a list of index-region tuples of unvisited cells
@@ -403,7 +415,7 @@ pub fn generate_maze(
         }
     }
 
-    (maze, history)
+    Ok((maze, history))
 }
 
 fn create_maze_backtrack(

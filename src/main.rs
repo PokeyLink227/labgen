@@ -4,7 +4,7 @@ use crate::{
         AnimationOptions, ImageFormat, ImageOptions, generate_gif, generate_gif_compressed,
         generate_png, generate_svg,
     },
-    maze::{MazeType, MazeWrap, generate_maze},
+    maze::{MazeGenError, MazeType, MazeWrap, generate_maze},
     mazetext::MazeText,
 };
 use clap::Parser;
@@ -117,44 +117,27 @@ struct Args {
     text: String,
 }
 
-fn main() {
+fn main() -> Result<(), MazeGenError> {
     let args = Args::parse();
 
     // parse args section
     let rooms: Vec<Rect> = if let Some(s) = args.rooms {
-        let res = s.split(';').map(Rect::from_str).collect();
-        match res {
-            Ok(v) => v,
-            Err(e) => {
-                println!("Error: {:?}", e);
-                return;
-            }
-        }
+        s.split(';').map(Rect::from_str).collect::<Result<_, _>>()?
     } else {
         Vec::new()
     };
 
     let exclude: Vec<Rect> = if let Some(s) = args.exclusions {
-        let res = s.split(';').map(Rect::from_str).collect();
-        match res {
-            Ok(v) => v,
-            Err(e) => {
-                println!("Error: {:?}", e);
-                return;
-            }
-        }
+        s.split(';').map(Rect::from_str).collect::<Result<_, _>>()?
     } else {
         Vec::new()
     };
 
     let text: Vec<MazeText> = if !args.text.is_empty() {
-        match args.text.split(';').map(MazeText::from_str).collect() {
-            Ok(v) => v,
-            Err(e) => {
-                println!("Error: {:?}", e);
-                return;
-            }
-        }
+        args.text
+            .split(';')
+            .map(MazeText::from_str)
+            .collect::<Result<_, _>>()?
     } else {
         Vec::new()
     };
@@ -175,7 +158,7 @@ fn main() {
         args.uncarve_percent,
         args.log_temps && args.animate,
         &mut rng,
-    );
+    )?;
     let maze_time = now.elapsed();
 
     now = Instant::now();
@@ -217,4 +200,6 @@ fn main() {
         image_time.as_secs(),
         image_time.as_nanos()
     );
+
+    Ok(())
 }

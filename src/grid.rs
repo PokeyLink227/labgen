@@ -160,12 +160,6 @@ impl FromStr for Rect {
     }
 }
 
-impl Rect {
-    pub fn new(x: i16, y: i16, w: i16, h: i16) -> Self {
-        Rect { x, y, w, h }
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ConnectionStatus {
     #[default]
