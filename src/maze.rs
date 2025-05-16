@@ -3,7 +3,7 @@ use crate::{
     history::MazeHistory,
     mazetext::{MazeFont, MazeText},
 };
-use rand::{Rng, seq::SliceRandom};
+use rand::{Rng, seq::{SliceRandom, IndexedRandom}};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Vector2<T> {
@@ -52,7 +52,7 @@ fn opposite(src: u8) -> u8 {
 
 fn pick_random(points: &[(usize, Point)], rng: &mut impl Rng) -> Option<(usize, Point)> {
     if !points.is_empty() {
-        Some(points[rng.gen_range(0..points.len())])
+        Some(points[rng.random_range(0..points.len())])
     } else {
         None
     }
@@ -378,7 +378,7 @@ pub fn generate_maze(
 
         while num_removed < num_to_remove {
             // pick a random deadend
-            let index = rng.gen_range(0..deadends.len());
+            let index = rng.random_range(0..deadends.len());
             let pos = deadends[index];
             maze[pos].status = ConnectionStatus::Removed;
 
@@ -495,7 +495,7 @@ fn create_maze_prim_simple(
     history.add_cell(pos);
 
     while !open_tiles.is_empty() {
-        let current_tile_index: usize = rng.gen_range(0..open_tiles.len());
+        let current_tile_index: usize = rng.random_range(0..open_tiles.len());
         pos = open_tiles[current_tile_index];
 
         let adj = match wrap {
@@ -541,7 +541,7 @@ fn create_maze_binary(maze: &mut Grid, history: &mut MazeHistory, rng: &mut impl
             let west_open: bool = x > 0 && !maze[(x - 1, y)].uncarveable();
 
             let dir: u8 = if west_open && north_open {
-                rng.gen_range(0..=1)
+                rng.random_range(0..=1)
             } else if west_open {
                 0
             } else if north_open {
@@ -592,7 +592,7 @@ fn create_maze_sidewinder(
 
     for y in 1..maze.height as i16 {
         let mut range_start = if wrap.is_some() {
-            rng.gen_range(0..maze.width)
+            rng.random_range(0..maze.width)
         } else {
             0
         };
@@ -600,7 +600,7 @@ fn create_maze_sidewinder(
 
         while cells_added < maze.width {
             // creates longer passages
-            //let range_len = rng.gen_range(1..=maze.width - cells_added);
+            //let range_len = rng.random_range(1..=maze.width - cells_added);
             // emulates cell by cell choice to extend the passage
             let mut range_len = 1;
             while range_len < maze.width - cells_added && rng.random::<bool>() {
@@ -608,7 +608,7 @@ fn create_maze_sidewinder(
             }
 
             let vert_pos = Point::new(
-                ((rng.gen_range(0..range_len) + range_start) % maze.width) as i16,
+                ((rng.random_range(0..range_len) + range_start) % maze.width) as i16,
                 y,
             );
             let mut pos = Point::new(range_start as i16, y);
@@ -667,9 +667,9 @@ fn create_maze_growingtree(
         let selected_index = match bias {
             GrowingTreeBias::Oldest => 0,              // lowest river factor
             GrowingTreeBias::Newest => open.len() - 1, // backtrack
-            GrowingTreeBias::Random => rng.gen_range(0..open.len()), // similar to prim
+            GrowingTreeBias::Random => rng.random_range(0..open.len()), // similar to prim
             GrowingTreeBias::Percent(p) => {
-                rng.gen_range((open.len() / 100 * (100 - p as usize))..open.len())
+                rng.random_range((open.len() / 100 * (100 - p as usize))..open.len())
             }
         };
         let selected = open[selected_index];
@@ -918,7 +918,7 @@ fn create_maze_prim_true(
     });
 
     while !open.is_empty() {
-        let edge = open.swap_remove(rng.gen_range(0..open.len()));
+        let edge = open.swap_remove(rng.random_range(0..open.len()));
 
         if maze[edge.0].status != ConnectionStatus::UnVisited {
             continue;
@@ -988,8 +988,8 @@ fn generate_noise(
     // fill grid with random direction vectors
     for _ in 0..(grid_width * grid_height) {
         grid.push(normalize(Vector2 {
-            x: rng.gen_range(-1.0..=1.0),
-            y: rng.gen_range(-1.0..=1.0),
+            x: rng.random_range(-1.0..=1.0),
+            y: rng.random_range(-1.0..=1.0),
         }));
     }
 
@@ -1114,7 +1114,7 @@ fn flood_tile_prim(maze: &mut Grid, noise_map: &[u8], mut pos: Point, rng: &mut 
     open_tiles.push(pos);
     maze.tiles[(pos.x + pos.y * maze.width as i16) as usize].status = ConnectionStatus::InMaze;
     while !open_tiles.is_empty() {
-        let current_tile_index: usize = rng.gen_range(0..open_tiles.len());
+        let current_tile_index: usize = rng.random_range(0..open_tiles.len());
         pos = open_tiles[current_tile_index];
 
         let next = pick_random(
