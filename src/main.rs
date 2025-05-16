@@ -1,14 +1,14 @@
 use crate::{
     grid::Rect,
     image::{
-        generate_gif, generate_gif_compressed, generate_png, generate_svg, AnimationOptions,
-        ImageFormat, ImageOptions,
+        AnimationOptions, ImageFormat, ImageOptions, generate_gif, generate_gif_compressed,
+        generate_png, generate_svg,
     },
-    maze::{generate_maze, MazeType, MazeWrap},
+    maze::{MazeType, MazeWrap, generate_maze},
     mazetext::MazeText,
 };
 use clap::Parser;
-use rand::{rngs::StdRng, SeedableRng};
+use rand::{SeedableRng, rngs::StdRng};
 use std::{str::FromStr, time::Instant};
 
 mod grid;

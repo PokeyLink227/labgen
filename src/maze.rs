@@ -3,7 +3,7 @@ use crate::{
     history::MazeHistory,
     mazetext::{MazeFont, MazeText},
 };
-use rand::{seq::SliceRandom, Rng};
+use rand::{Rng, seq::SliceRandom};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Vector2<T> {
@@ -603,7 +603,7 @@ fn create_maze_sidewinder(
             //let range_len = rng.gen_range(1..=maze.width - cells_added);
             // emulates cell by cell choice to extend the passage
             let mut range_len = 1;
-            while range_len < maze.width - cells_added && rng.gen::<bool>() {
+            while range_len < maze.width - cells_added && rng.random::<bool>() {
                 range_len += 1;
             }
 
