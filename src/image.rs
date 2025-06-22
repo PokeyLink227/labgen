@@ -448,10 +448,13 @@ pub fn generate_png(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Err
     Ok(())
 }
 
+type TileMap = [char; 16];
+
 // TODO:
 // - add conversion from string for custom characters
 // - maybe convert pixel array to u8 and make the u8 to char to string conversion all at once
-static INTERSECTION_MAPS: [[char; 16]; 7] = [
+//   - this is not faster sadly
+static TILE_MAPS: [TileMap; 7] = [
     [
         ' ', '╵', '╶', '└', '╷', '│', '┌', '├', '╴', '┘', '─', '┴', '┐', '┤', '┬', '┼',
     ],
@@ -474,7 +477,7 @@ static INTERSECTION_MAPS: [[char; 16]; 7] = [
         ' ', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#',
     ],
 ];
-static INTERSECTION_MAP: &[char; 16] = &INTERSECTION_MAPS[0];
+static INTERSECTION_MAP: &TileMap = &TILE_MAPS[0];
 
 fn set_intersection(pixels: &mut [char], width: usize, height: usize, px: usize, py: usize) {
     let mut walls = 0x00;
