@@ -451,7 +451,7 @@ pub fn generate_png(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Err
 // TODO:
 // - add conversion from string for custom characters
 // - maybe convert pixel array to u8 and make the u8 to char to string conversion all at once
-static INTERSECTION_MAPS: [[char; 16]; 6] = [
+static INTERSECTION_MAPS: [[char; 16]; 7] = [
     [
         ' ', '╵', '╶', '└', '╷', '│', '┌', '├', '╴', '┘', '─', '┴', '┐', '┤', '┬', '┼',
     ],
@@ -466,6 +466,9 @@ static INTERSECTION_MAPS: [[char; 16]; 6] = [
     ],
     [
         ' ', '+', '+', '\\', '+', '|', '/', '+', '+', '/', '-', '+', '\\', '+', '+', '+',
+    ],
+    [
+        ' ', '█', '█', '█', '█', '█', '█', '█', '█', '█', '█', '█', '█', '█', '█', '█',
     ],
     [
         ' ', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#',
