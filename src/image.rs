@@ -16,6 +16,7 @@ pub enum ImageFormat {
     #[default]
     Png,
     Svg,
+    Text,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -443,6 +444,103 @@ pub fn generate_png(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Err
     }
 
     writer.write_image_data(&pixels)?;
+
+    Ok(())
+}
+
+static intersection_map: &'static str = " ╵╶└╷│┌├╴┘─┴┐┤┬┼";
+//static intersection_map: &'static str = " ###############";
+//static intersection_map: &'static str = " ++++|++++-+++++";
+
+fn set_intersection(pixels: &mut [char], width: usize, height: usize, px: usize, py: usize) {
+    let mut walls = 0x00;
+
+    if py > 0 && pixels[px + (py - 1) * width] != ' ' {
+        walls |= 0x01;
+    }
+    if px < width - 2 && pixels[(px + 1) + py * width] != ' ' {
+        walls |= 0x02;
+    }
+    if py < height - 1 && pixels[px + (py + 1) * width] != ' ' {
+        walls |= 0x04;
+    }
+    if px > 0 && pixels[(px - 1) + py * width] != ' ' {
+        walls |= 0x08;
+    }
+
+    pixels[px + py * width] = intersection_map.chars().nth(walls).unwrap();
+}
+
+pub fn generate_text(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Error> {
+    let horiz = intersection_map.chars().nth(10).unwrap();
+    let vert = intersection_map.chars().nth(5).unwrap();
+
+    let opts = &ImageOptions {
+        wall_width: 1,
+        ..opts.clone()
+    };
+
+    let passage_width = 3;
+    let passage_height = 1;
+    let cell_width: u16 = passage_width as u16 + opts.wall_width;
+    let cell_height: u16 = passage_height as u16 + opts.wall_width;
+    let (width, height) = (
+        (maze.width * cell_width + opts.wall_width + 1) as usize,
+        (maze.height * cell_height + opts.wall_width) as usize,
+    );
+
+    let file = File::create(format!("{}.txt", &opts.file_path).as_str())?;
+    let writer = &mut BufWriter::new(file);
+
+    // width + 1 to account for '\n'
+    let mut pixels: Vec<char> = vec![' '; width * height];
+
+    for x in 0..width {
+        pixels[x] = horiz;
+    }
+    pixels[width - 1] = '\n';
+
+    for py in 0..maze.height {
+        let top: usize = (py * cell_height + opts.wall_width) as usize;
+
+        for y in 0..cell_height as usize {
+            pixels[(top as usize + y) * width as usize] = vert;
+            pixels[(width as usize - 1) + ((top as usize + y) * width as usize)] = '\n';
+        }
+
+        for px in 0..maze.width {
+            let tile = maze[(px as i16, py as i16)];
+            let left: usize = (px * cell_width + opts.wall_width) as usize;
+
+            // check upper left corner for intersection type
+            set_intersection(&mut pixels, width, height, left - 1, top - 1);
+
+            if !(tile.status == ConnectionStatus::InMaze || tile.status == ConnectionStatus::Room) {
+                continue;
+            }
+
+            if !tile.connected(Direction::East) {
+                for y in 0..cell_height as usize {
+                    pixels
+                        [(left + passage_width) as usize + ((top + y) as usize * width as usize)] =
+                        vert;
+                }
+            }
+            if !tile.connected(Direction::South) {
+                for x in 0..cell_width as usize {
+                    pixels[(left + x) as usize + ((top + 1) as usize * width as usize)] = horiz;
+                }
+            }
+        }
+
+        set_intersection(&mut pixels, width, height, width - 2, top - 1);
+    }
+
+    (0..width - 1)
+        .step_by(2)
+        .for_each(|i| set_intersection(&mut pixels, width, height, i, height - 1));
+
+    writer.write(pixels.into_iter().collect::<String>().as_bytes())?;
 
     Ok(())
 }

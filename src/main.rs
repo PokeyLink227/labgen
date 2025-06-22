@@ -2,7 +2,7 @@ use crate::{
     grid::Rect,
     image::{
         AnimationOptions, ImageFormat, ImageOptions, generate_gif, generate_gif_compressed,
-        generate_png, generate_svg,
+        generate_png, generate_svg, generate_text,
     },
     maze::{MazeGenError, MazeType, MazeWrap, generate_maze},
     mazetext::MazeText,
@@ -179,6 +179,7 @@ fn main() -> Result<(), MazeGenError> {
     if !args.nosave {
         match args.format {
             Some(ImageFormat::Png) => generate_png(&nodes, &opts),
+            Some(ImageFormat::Text) => generate_text(&nodes, &opts),
             Some(ImageFormat::Gif) => {
                 generate_gif(&nodes, hist.get_actions(), &rooms, &opts, &ani_opts)
             }
