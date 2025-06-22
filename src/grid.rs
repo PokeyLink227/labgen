@@ -181,7 +181,7 @@ pub enum Direction {
     South = 0b00010000,
     SouthWest = 0b00100000,
     West = 0b01000000,
-    NorthWest = 0b010000000,
+    NorthWest = 0b10000000,
 }
 
 impl From<u8> for Direction {
