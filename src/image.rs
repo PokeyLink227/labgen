@@ -448,32 +448,35 @@ pub fn generate_png(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Err
     Ok(())
 }
 
-static intersection_map: &'static str = " ╵╶└╷│┌├╴┘─┴┐┤┬┼";
+//static intersection_map: &'static str = " ╵╶└╷│┌├╴┘─┴┐┤┬┼";
+static intersection_map: [char; 16] = [
+    ' ', '╵', '╶', '└', '╷', '│', '┌', '├', '╴', '┘', '─', '┴', '┐', '┤', '┬', '┼',
+];
 //static intersection_map: &'static str = " ###############";
 //static intersection_map: &'static str = " ++++|++++-+++++";
 
 fn set_intersection(pixels: &mut [char], width: usize, height: usize, px: usize, py: usize) {
     let mut walls = 0x00;
 
-    if py > 0 && pixels[px + (py - 1) * width] != ' ' {
+    if py > 0 && pixels[px + (py - 1) * width] != intersection_map[0] {
         walls |= 0x01;
     }
-    if px < width - 2 && pixels[(px + 1) + py * width] != ' ' {
+    if px < width - 2 && pixels[(px + 1) + py * width] != intersection_map[0] {
         walls |= 0x02;
     }
-    if py < height - 1 && pixels[px + (py + 1) * width] != ' ' {
+    if py < height - 1 && pixels[px + (py + 1) * width] != intersection_map[0] {
         walls |= 0x04;
     }
-    if px > 0 && pixels[(px - 1) + py * width] != ' ' {
+    if px > 0 && pixels[(px - 1) + py * width] != intersection_map[0] {
         walls |= 0x08;
     }
 
-    pixels[px + py * width] = intersection_map.chars().nth(walls).unwrap();
+    pixels[px + py * width] = intersection_map[walls];
 }
 
 pub fn generate_text(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Error> {
-    let horiz = intersection_map.chars().nth(10).unwrap();
-    let vert = intersection_map.chars().nth(5).unwrap();
+    let horiz = intersection_map[10];
+    let vert = intersection_map[5];
 
     let opts = &ImageOptions {
         wall_width: 1,
@@ -484,6 +487,8 @@ pub fn generate_text(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Er
     let passage_height = 1;
     let cell_width: u16 = passage_width as u16 + opts.wall_width;
     let cell_height: u16 = passage_height as u16 + opts.wall_width;
+
+    // width + 1 to account for '\n'
     let (width, height) = (
         (maze.width * cell_width + opts.wall_width + 1) as usize,
         (maze.height * cell_height + opts.wall_width) as usize,
@@ -492,8 +497,7 @@ pub fn generate_text(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Er
     let file = File::create(format!("{}.txt", &opts.file_path).as_str())?;
     let writer = &mut BufWriter::new(file);
 
-    // width + 1 to account for '\n'
-    let mut pixels: Vec<char> = vec![' '; width * height];
+    let mut pixels: Vec<char> = vec![intersection_map[0]; width * height];
 
     for x in 0..width {
         pixels[x] = horiz;
