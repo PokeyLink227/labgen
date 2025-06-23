@@ -507,8 +507,10 @@ pub fn generate_text(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Er
         ..opts.clone()
     };
 
-    let passage_width = 3;
-    let passage_height = 1;
+    // TODO: move passage width/height to image option
+    // or make into ratio to make a default value makre more sense
+    let passage_width = 5;
+    let passage_height = 2;
     let cell_width: u16 = passage_width as u16 + opts.wall_width;
     let cell_height: u16 = passage_height as u16 + opts.wall_width;
 
@@ -556,7 +558,8 @@ pub fn generate_text(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Er
             }
             if !tile.connected(Direction::South) {
                 for x in 0..cell_width as usize {
-                    pixels[(left + x) as usize + ((top + 1) as usize * width as usize)] = horiz;
+                    pixels[(left + x) as usize
+                        + ((top + passage_height) as usize * width as usize)] = horiz;
                 }
             }
         }
