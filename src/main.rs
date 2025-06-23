@@ -144,7 +144,7 @@ fn main() -> Result<(), MazeGenError> {
 
     let seed: u64 = args.seed.unwrap_or(rand::random::<u64>());
     let mut rng = SmallRng::seed_from_u64(seed);
-    println!("seed: {}", seed);
+    println!("Seed: {}", seed);
 
     let mut now = Instant::now();
     let (nodes, hist) = generate_maze(
@@ -195,7 +195,7 @@ fn main() -> Result<(), MazeGenError> {
 
     //println!("dbg: {:?}", nodes.tiles);
     println!(
-        "Elapsed time: maze {}.{:09.9}s, {:?} {}.{:09.9}s",
+        "Elapsed time: Maze {}.{:09.9}s, {:?} {}.{:09.9}s",
         maze_time.as_secs(),
         maze_time.as_nanos(),
         args.format.unwrap_or(ImageFormat::Png),
