@@ -549,10 +549,6 @@ pub fn generate_text(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Er
             // check upper left corner for intersection type
             set_intersection(&mut pixels, width, height, left - 1, top - 1);
 
-            if !(tile.status == ConnectionStatus::InMaze || tile.status == ConnectionStatus::Room) {
-                continue;
-            }
-
             if !tile.connected(Direction::East) {
                 for y in 0..cell_height as usize {
                     pixels[(left + passage_width) + ((top + y) * width)] = vert;
