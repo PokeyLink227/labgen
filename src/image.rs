@@ -509,8 +509,8 @@ pub fn generate_text(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Er
 
     // TODO: move passage width/height to image option
     // or make into ratio to make a default value makre more sense
-    let passage_width = 5;
-    let passage_height = 2;
+    let passage_width = 3;
+    let passage_height = 1;
     let cell_width: u16 = passage_width as u16 + opts.wall_width;
     let cell_height: u16 = passage_height as u16 + opts.wall_width;
 
@@ -526,7 +526,9 @@ pub fn generate_text(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Er
     let mut pixels: Vec<char> = vec![INTERSECTION_MAP[0]; width * height];
 
     for x in 0..width {
-        pixels[x] = horiz;
+        if !maze[(x as i16 / cell_width as i16, 0)].connected(Direction::North) {
+            pixels[x] = horiz;
+        }
     }
     pixels[width - 1] = '\n';
 
@@ -534,7 +536,9 @@ pub fn generate_text(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Er
         let top: usize = (py * cell_height + opts.wall_width) as usize;
 
         for y in 0..cell_height as usize {
-            pixels[(top + y) * width] = vert;
+            if !maze[(0, py as i16)].connected(Direction::West) {
+                pixels[(top + y) * width] = vert;
+            }
             pixels[(width - 1) + ((top + y) * width)] = '\n';
         }
 
