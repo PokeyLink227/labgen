@@ -195,9 +195,10 @@ fn main() -> Result<(), MazeGenError> {
 
     //println!("dbg: {:?}", nodes.tiles);
     println!(
-        "Elapsed time: maze {}.{:09.9}s, gif {}.{:09.9}s",
+        "Elapsed time: maze {}.{:09.9}s, {:?} {}.{:09.9}s",
         maze_time.as_secs(),
         maze_time.as_nanos(),
+        args.format.unwrap_or(ImageFormat::Png),
         image_time.as_secs(),
         image_time.as_nanos()
     );

@@ -1,6 +1,6 @@
 use crate::grid::{ConnectionStatus, Direction, Grid, Point, Tile};
 use regex::Regex;
-use std::{cell::LazyCell, fs::File};
+use std::{cell::LazyCell, fmt::Display, fs::File};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MazeTextError {
@@ -9,6 +9,12 @@ pub enum MazeTextError {
     FontFileMissing,
     CouldntParseText,
     MazeTooSmall,
+}
+
+impl Display for MazeTextError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self:?}")
+    }
 }
 
 #[derive(Debug, Clone, Copy)]

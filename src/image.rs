@@ -534,8 +534,8 @@ pub fn generate_text(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Er
         let top: usize = (py * cell_height + opts.wall_width) as usize;
 
         for y in 0..cell_height as usize {
-            pixels[(top as usize + y) * width as usize] = vert;
-            pixels[(width as usize - 1) + ((top as usize + y) * width as usize)] = '\n';
+            pixels[(top + y) * width] = vert;
+            pixels[(width - 1) + ((top + y) * width)] = '\n';
         }
 
         for px in 0..maze.width {
@@ -551,15 +551,12 @@ pub fn generate_text(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Er
 
             if !tile.connected(Direction::East) {
                 for y in 0..cell_height as usize {
-                    pixels
-                        [(left + passage_width) as usize + ((top + y) as usize * width as usize)] =
-                        vert;
+                    pixels[(left + passage_width) + ((top + y) * width)] = vert;
                 }
             }
             if !tile.connected(Direction::South) {
                 for x in 0..cell_width as usize {
-                    pixels[(left + x) as usize
-                        + ((top + passage_height) as usize * width as usize)] = horiz;
+                    pixels[(left + x) + ((top + passage_height) * width)] = horiz;
                 }
             }
         }

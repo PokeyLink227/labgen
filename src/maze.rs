@@ -7,6 +7,7 @@ use rand::{
     Rng,
     seq::{IndexedRandom, IteratorRandom, SliceRandom},
 };
+use std::fmt::{Debug, Display};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Vector2<T> {
@@ -68,11 +69,32 @@ fn pick_random(points: &[(usize, Point)], rng: &mut impl Rng) -> Option<(usize, 
     }
 }
 
-#[derive(Debug)]
 pub enum MazeGenError {
     MazeText(MazeTextError),
     ParseRectError,
+    RoomOutOfBounds(Rect),
     IoError(std::io::Error),
+}
+
+impl Debug for MazeGenError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self}")
+    }
+}
+
+impl Display for MazeGenError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                MazeGenError::MazeText(e) => format!("Text Error: {e}"),
+                MazeGenError::ParseRectError => "Unable to parse Rect".to_owned(),
+                MazeGenError::RoomOutOfBounds(r) => format!("Room out of bounds: {r}"),
+                MazeGenError::IoError(e) => format!("IO Error: {e}"),
+            }
+        )
+    }
 }
 
 impl From<MazeTextError> for MazeGenError {
@@ -134,6 +156,10 @@ pub fn generate_maze(
     // add rooms to the maze
     let fully_connected: u8 = 0b11111111;
     for r in rooms {
+        if r.x + r.w >= maze.width as i16 || r.y + r.h >= maze.height as i16 {
+            return Err(MazeGenError::RoomOutOfBounds(r.clone()));
+        }
+
         for y in 0..r.h {
             for x in 0..r.w {
                 let mut connections = fully_connected;

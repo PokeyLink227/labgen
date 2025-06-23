@@ -141,6 +141,12 @@ pub struct Rect {
     pub h: i16,
 }
 
+impl Display for Rect {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}, {}, {}, {})", self.x, self.y, self.w, self.h)
+    }
+}
+
 impl FromStr for Rect {
     type Err = ParseRectError;
 
