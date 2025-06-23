@@ -1,5 +1,5 @@
 (maze)
-add SVG and mp4 support
+add mp4 support
 add regions that get connected at the end only?
 add ellers and growing forest - for sure second one
 sparse mazes
