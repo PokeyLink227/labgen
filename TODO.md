@@ -11,6 +11,7 @@ improve history possibly with an enum to support
 wrapping rooms
 user-defined textures for cell-types
 pass algo a function to use for finding adjacant tiles
+add option for user to choose text exclusion rendering method
 
 make string parsing use regex.captures to allow users to use reserved characters
 
