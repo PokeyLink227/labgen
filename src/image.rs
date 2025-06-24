@@ -526,7 +526,9 @@ pub fn generate_text(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Er
     let mut pixels: Vec<char> = vec![INTERSECTION_MAP[0]; width * height];
 
     for x in 0..width {
-        if !maze[(x as i16 / cell_width as i16, 0)].connected(Direction::North) {
+        if maze[(x as i16 / cell_width as i16, 0)].status != ConnectionStatus::Removed
+            && !maze[(x as i16 / cell_width as i16, 0)].connected(Direction::North)
+        {
             pixels[x] = horiz;
         }
     }
@@ -536,7 +538,9 @@ pub fn generate_text(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Er
         let top: usize = (py * cell_height + opts.wall_width) as usize;
 
         for y in 0..cell_height as usize {
-            if !maze[(0, py as i16)].connected(Direction::West) {
+            if maze[(0, py as i16)].status != ConnectionStatus::Removed
+                && !maze[(0, py as i16)].connected(Direction::West)
+            {
                 pixels[(top + y) * width] = vert;
             }
             pixels[(width - 1) + ((top + y) * width)] = '\n';
@@ -546,8 +550,10 @@ pub fn generate_text(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Er
             let tile = maze[(px as i16, py as i16)];
             let left: usize = (px * cell_width + opts.wall_width) as usize;
 
-            // check upper left corner for intersection type
-            set_intersection(&mut pixels, width, height, left - 1, top - 1);
+            if tile.status == ConnectionStatus::Removed {
+                set_intersection(&mut pixels, width, height, left - 1, top - 1);
+                continue;
+            }
 
             if !tile.connected(Direction::East) {
                 for y in 0..cell_height as usize {
@@ -559,6 +565,18 @@ pub fn generate_text(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Er
                     pixels[(left + x) + ((top + passage_height) * width)] = horiz;
                 }
             }
+            if !tile.connected(Direction::West) {
+                for y in 0..cell_height as usize {
+                    pixels[(left - 1) + ((top + y) * width)] = vert;
+                }
+            }
+            if !tile.connected(Direction::North) {
+                for x in 0..cell_width as usize {
+                    pixels[(left + x) + ((top - 1) * width)] = horiz;
+                }
+            }
+
+            set_intersection(&mut pixels, width, height, left - 1, top - 1);
         }
 
         set_intersection(&mut pixels, width, height, width - 2, top - 1);
