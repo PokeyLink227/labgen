@@ -92,7 +92,7 @@ struct Args {
         long = "remove-deadends",
         default_value = "0",
         value_name = "percent",
-        value_parser = clap::value_parser!(u8).range(0..100),
+        value_parser = clap::value_parser!(u8).range(0..=100),
     )]
     uncarve_percent: u8,
 
