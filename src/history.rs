@@ -24,7 +24,7 @@ pub struct MazeHistory {
 }
 
 impl MazeHistory {
-    pub fn new(w: u16, h: u16, temps: bool) -> Self {
+    pub const fn new(w: u16, h: u16, temps: bool) -> Self {
         Self {
             actions: Vec::new(),
             temp_cells: Vec::new(),
@@ -46,7 +46,7 @@ impl MazeHistory {
         }
     }
 
-    pub fn enable_temp_cells(&mut self) {
+    pub const fn enable_temp_cells(&mut self) {
         self.log_temps = true;
     }
 
@@ -55,7 +55,9 @@ impl MazeHistory {
     }
 
     pub fn carve(&mut self, new: Point, from_direction: Direction) {
-        if !self.temp_cells.is_empty() {
+        if self.temp_cells.is_empty() {
+            self.actions.push(MazeAction::Add(new, from_direction));
+        } else {
             self.actions.push(MazeAction::StartFrame);
 
             /*
@@ -87,8 +89,6 @@ impl MazeHistory {
 
             self.actions.push(MazeAction::Add(new, from_direction));
             self.actions.push(MazeAction::EndFrame);
-        } else {
-            self.actions.push(MazeAction::Add(new, from_direction));
         }
     }
 

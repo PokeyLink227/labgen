@@ -9,7 +9,7 @@ use std::{
     io::{BufWriter, Write},
 };
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, clap::ValueEnum)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
 pub enum ImageFormat {
     Gif,
     CompressedGif,
@@ -19,7 +19,7 @@ pub enum ImageFormat {
     Text,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ImageOptions {
     pub file_path: String,
     pub passage_width: u16,
@@ -27,7 +27,7 @@ pub struct ImageOptions {
     pub color_map: [u8; 12],
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct AnimationOptions {
     pub frame_time: u16,
     pub pause_time: u16,
@@ -118,7 +118,7 @@ pub fn generate_gif(
     history: &[MazeAction],
     rooms: &[Rect],
     opts: &ImageOptions,
-    ani_opts: &AnimationOptions,
+    ani_opts: AnimationOptions,
 ) -> Result<(), std::io::Error> {
     let cell_width: u16 = opts.passage_width + opts.wall_width;
 
@@ -273,7 +273,7 @@ pub fn generate_gif_compressed(
     history: &[MazeAction],
     rooms: &[Rect],
     opts: &ImageOptions,
-    ani_opts: &AnimationOptions,
+    ani_opts: AnimationOptions,
 ) -> Result<(), std::io::Error> {
     let cell_width: u16 = opts.passage_width + opts.wall_width;
 
@@ -586,7 +586,7 @@ pub fn generate_text(maze: &Grid, opts: &ImageOptions) -> Result<(), std::io::Er
         .step_by(2)
         .for_each(|i| set_intersection(&mut pixels, width, height, i, height - 1));
 
-    writer.write(pixels.into_iter().collect::<String>().as_bytes())?;
+    writer.write_all(pixels.into_iter().collect::<String>().as_bytes())?;
 
     Ok(())
 }

@@ -11,3 +11,11 @@ gif = "0.13.1"
 rand = { version = "0.9.0", features = ["std_rng"] }
 clap = { version = "4.5.36", features = ["derive"] }
 regex = "1.11.1"
+
+[lints.clippy]
+pedantic = { level = "deny", priority = -1 }
+nursery = { level = "deny", priority = -1 }
+cast_possible_wrap = "allow"
+cast_sign_loss = "allow"
+cast_lossless = "allow"
+cast_possible_truncation = "allow"

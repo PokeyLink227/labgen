@@ -16,7 +16,7 @@ struct Vector2<T> {
 }
 
 impl Vector2<f32> {
-    fn dot(lhs: Vector2<f32>, rhs: Vector2<f32>) -> f32 {
+    fn dot(lhs: Self, rhs: Self) -> f32 {
         lhs.x * rhs.x + lhs.y * rhs.y
     }
 }
@@ -47,7 +47,7 @@ pub enum MazeWrap {
 }
 
 impl MazeWrap {
-    fn check(self, other: MazeWrap) -> bool {
+    const fn check(self, other: Self) -> bool {
         (self as u8 & other as u8) != 0
     }
 }
@@ -62,10 +62,10 @@ fn opposite(src: u8) -> u8 {
 */
 
 fn pick_random(points: &[(usize, Point)], rng: &mut impl Rng) -> Option<(usize, Point)> {
-    if !points.is_empty() {
-        Some(points[rng.random_range(0..points.len())])
-    } else {
+    if points.is_empty() {
         None
+    } else {
+        Some(points[rng.random_range(0..points.len())])
     }
 }
 
@@ -88,30 +88,30 @@ impl Display for MazeGenError {
             f,
             "{}",
             match self {
-                MazeGenError::MazeText(e) => format!("Text Error: {e}"),
-                MazeGenError::ParseRectError => "Unable to parse Rect".to_owned(),
-                MazeGenError::RoomOutOfBounds(r) => format!("Room out of bounds: {r}"),
-                MazeGenError::IoError(e) => format!("IO Error: {e}"),
+                Self::MazeText(e) => format!("Text Error: {e}"),
+                Self::ParseRectError => "Unable to parse Rect".to_owned(),
+                Self::RoomOutOfBounds(r) => format!("Room out of bounds: {r}"),
+                Self::IoError(e) => format!("IO Error: {e}"),
             }
         )
     }
 }
 
 impl From<MazeTextError> for MazeGenError {
-    fn from(err: MazeTextError) -> MazeGenError {
-        MazeGenError::MazeText(err)
+    fn from(err: MazeTextError) -> Self {
+        Self::MazeText(err)
     }
 }
 
 impl From<ParseRectError> for MazeGenError {
-    fn from(_err: ParseRectError) -> MazeGenError {
-        MazeGenError::ParseRectError
+    fn from(_err: ParseRectError) -> Self {
+        Self::ParseRectError
     }
 }
 
 impl From<std::io::Error> for MazeGenError {
-    fn from(err: std::io::Error) -> MazeGenError {
-        MazeGenError::IoError(err)
+    fn from(err: std::io::Error) -> Self {
+        Self::IoError(err)
     }
 }
 
@@ -154,10 +154,10 @@ pub fn generate_maze(
     }
 
     // add rooms to the maze
-    let fully_connected: u8 = 0b11111111;
+    let fully_connected: u8 = 0b1111_1111;
     for r in rooms {
         if r.x + r.w >= maze.width as i16 || r.y + r.h >= maze.height as i16 {
-            return Err(MazeGenError::RoomOutOfBounds(r.clone()));
+            return Err(MazeGenError::RoomOutOfBounds(*r));
         }
 
         for y in 0..r.h {
@@ -394,10 +394,10 @@ pub fn generate_maze(
     edges.shuffle(rng);
     for e in edges {
         let node1 = e.0;
-        let node2 = if wrap != MazeWrap::None {
-            e.0.travel_wrapped(e.1, maze.width, maze.height)
-        } else {
+        let node2 = if wrap == MazeWrap::None {
             e.0.travel(e.1)
+        } else {
+            e.0.travel_wrapped(e.1, maze.width, maze.height)
         };
 
         // if edge connects 2 different regions
@@ -579,7 +579,7 @@ fn create_maze_prim_simple(
 }
 
 fn create_maze_binary(maze: &mut Grid, history: &mut MazeHistory, rng: &mut impl Rng) {
-    use crate::maze::Direction::*;
+    use crate::maze::Direction::{East, NoDir, North, South, West};
 
     for y in 0..maze.height as i16 {
         for x in 0..maze.width as i16 {
@@ -641,10 +641,10 @@ fn create_maze_sidewinder(
     history.carve(Point::new((maze.width - 1) as i16, 0), D::West);
 
     for y in 1..maze.height as i16 {
-        let mut range_start = if wrap != MazeWrap::None {
-            rng.random_range(0..maze.width)
-        } else {
+        let mut range_start = if wrap == MazeWrap::None {
             0
+        } else {
+            rng.random_range(0..maze.width)
         };
         let mut cells_added = 0;
 
@@ -667,10 +667,10 @@ fn create_maze_sidewinder(
             for _ in 1..range_len {
                 maze[pos].connect(D::East);
 
-                if wrap != MazeWrap::None {
-                    pos = pos.travel_wrapped(D::East, maze.width, maze.height);
-                } else {
+                if wrap == MazeWrap::None {
                     pos = pos.travel(D::East);
+                } else {
+                    pos = pos.travel_wrapped(D::East, maze.width, maze.height);
                 }
 
                 maze[pos].status = ConnectionStatus::InMaze;
@@ -695,7 +695,7 @@ pub enum GrowingTreeBias {
 
 impl Default for GrowingTreeBias {
     fn default() -> Self {
-        GrowingTreeBias::Percent(10)
+        Self::Percent(10)
     }
 }
 
@@ -778,9 +778,8 @@ fn create_maze_wilson(
             reservoir_index += 1;
             if reservoir_index >= reservoir.len() {
                 break 'outer;
-            } else {
-                anchor = reservoir[reservoir_index];
             }
+            anchor = reservoir[reservoir_index];
         }
         let mut pos = anchor;
 
@@ -826,10 +825,10 @@ fn create_maze_wilson(
             } else {
                 history.carve(pos, dir);
             }
-            if wrap != MazeWrap::None {
-                pos = pos.travel_wrapped(dir, maze.width, maze.height);
-            } else {
+            if wrap == MazeWrap::None {
                 pos = pos.travel(dir);
+            } else {
+                pos = pos.travel_wrapped(dir, maze.width, maze.height);
             }
         }
         maze[pos].connect(dir.opposite());
@@ -877,10 +876,10 @@ fn create_maze_kruskal(
     // generate maze
     for edge in edges {
         let node1 = edge.0;
-        let node2 = if wrap != MazeWrap::None {
-            edge.0.travel_wrapped(edge.1, maze.width, maze.height)
-        } else {
+        let node2 = if wrap == MazeWrap::None {
             edge.0.travel(edge.1)
+        } else {
+            edge.0.travel_wrapped(edge.1, maze.width, maze.height)
         };
 
         // if edge connects 2 different regions
@@ -975,10 +974,10 @@ fn create_maze_prim_true(
 
         history.carve(edge.0, edge.1);
 
-        let target = if wrap != MazeWrap::None {
-            edge.0.travel_wrapped(edge.1, maze.width, maze.height)
-        } else {
+        let target = if wrap == MazeWrap::None {
             edge.0.travel(edge.1)
+        } else {
+            edge.0.travel_wrapped(edge.1, maze.width, maze.height)
         };
         maze[target].connect(edge.1.opposite());
 
@@ -998,11 +997,12 @@ fn create_maze_prim_true(
 fn interpolate(a: f32, b: f32, s: f32) -> f32 {
     // a + (b - a) * s
     // a + (b - a) * s * s * (3.0 - s * 2.0)
-    a + (b - a) * ((s * (s * 6.0 - 15.0) + 10.0) * s * s * s)
+    // a + (b - a) * ((s * (s * 6.0 - 15.0) + 10.0) * s * s * s)
+    (b - a).mul_add((s.mul_add(6.0, -15.0).mul_add(s, 10.0)) * s * s * s, a)
 }
 
 fn normalize(v: Vector2<f32>) -> Vector2<f32> {
-    let len = (v.x * v.x + v.y * v.y).sqrt();
+    let len = v.x.hypot(v.y);
     Vector2 {
         x: v.x / len,
         y: v.y / len,
@@ -1248,7 +1248,7 @@ fn flood_tile_backtrack(maze: &mut Grid, noise_map: &[u8], mut pos: Point, rng: 
 fn create_maze_noise(maze: &mut Grid, _history: &mut MazeHistory, rng: &mut impl Rng) {
     let noise_map: Vec<u8> = generate_noise(maze.width, maze.height, 7, 7, rng)
         .iter()
-        .map(|x| if *x < 0.0 { 0 } else { 1 })
+        .map(|x| u8::from(*x >= 0.0))
         .collect();
 
     for y in 0..maze.height as i16 {

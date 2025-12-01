@@ -39,24 +39,24 @@ impl Display for Point {
 }
 
 impl From<(i16, i16)> for Point {
-    fn from(val: (i16, i16)) -> Point {
-        Point { x: val.0, y: val.1 }
+    fn from(val: (i16, i16)) -> Self {
+        Self { x: val.0, y: val.1 }
     }
 }
 
 impl From<Point> for (i16, i16) {
-    fn from(val: Point) -> (i16, i16) {
+    fn from(val: Point) -> Self {
         (val.x, val.y)
     }
 }
 
 impl Point {
-    pub fn adjacent(self) -> array::IntoIter<Point, 4> {
+    pub fn adjacent(self) -> array::IntoIter<Self, 4> {
         [
-            self + Point { x: 0, y: -1 },
-            self + Point { x: 1, y: 0 },
-            self + Point { x: 0, y: 1 },
-            self + Point { x: -1, y: 0 },
+            self + Self { x: 0, y: -1 },
+            self + Self { x: 1, y: 0 },
+            self + Self { x: 0, y: 1 },
+            self + Self { x: -1, y: 0 },
         ]
         .into_iter()
     }
@@ -66,28 +66,28 @@ impl Point {
         dir: MazeWrap,
         width: u16,
         height: u16,
-    ) -> array::IntoIter<Point, 4> {
+    ) -> array::IntoIter<Self, 4> {
         [
             if self.y - 1 < 0 && (dir == MazeWrap::Full || dir == MazeWrap::Vertical) {
-                Point::new(self.x, height as i16 - 1)
+                Self::new(self.x, height as i16 - 1)
             } else {
-                self + Point { x: 0, y: -1 }
+                self + Self { x: 0, y: -1 }
             },
             if self.x + 1 >= width as i16 && (dir == MazeWrap::Full || dir == MazeWrap::Horizontal)
             {
-                Point { x: 0, y: self.y }
+                Self { x: 0, y: self.y }
             } else {
-                self + Point { x: 1, y: 0 }
+                self + Self { x: 1, y: 0 }
             },
             if self.y + 1 >= height as i16 && (dir == MazeWrap::Full || dir == MazeWrap::Vertical) {
-                Point { x: self.x, y: 0 }
+                Self { x: self.x, y: 0 }
             } else {
-                self + Point { x: 0, y: 1 }
+                self + Self { x: 0, y: 1 }
             },
             if self.x - 1 < 0 && (dir == MazeWrap::Full || dir == MazeWrap::Horizontal) {
-                Point::new(width as i16 - 1, self.y)
+                Self::new(width as i16 - 1, self.y)
             } else {
-                self + Point { x: -1, y: 0 }
+                self + Self { x: -1, y: 0 }
             },
         ]
         .into_iter()
@@ -96,14 +96,14 @@ impl Point {
     pub fn travel(self, dir: Direction) -> Self {
         match dir {
             Direction::NoDir => self,
-            Direction::North => self + Point { x: 0, y: -1 },
-            Direction::NorthEast => self + Point { x: 1, y: -1 },
-            Direction::East => self + Point { x: 1, y: 0 },
-            Direction::SouthEast => self + Point { x: 1, y: 1 },
-            Direction::South => self + Point { x: 0, y: 1 },
-            Direction::SouthWest => self + Point { x: -1, y: 1 },
-            Direction::West => self + Point { x: -1, y: 0 },
-            Direction::NorthWest => self + Point { x: -1, y: -1 },
+            Direction::North => self + Self { x: 0, y: -1 },
+            Direction::NorthEast => self + Self { x: 1, y: -1 },
+            Direction::East => self + Self { x: 1, y: 0 },
+            Direction::SouthEast => self + Self { x: 1, y: 1 },
+            Direction::South => self + Self { x: 0, y: 1 },
+            Direction::SouthWest => self + Self { x: -1, y: 1 },
+            Direction::West => self + Self { x: -1, y: 0 },
+            Direction::NorthWest => self + Self { x: -1, y: -1 },
         }
     }
 
@@ -125,7 +125,7 @@ impl Point {
         new_pos
     }
 
-    pub fn new(x: i16, y: i16) -> Self {
+    pub const fn new(x: i16, y: i16) -> Self {
         Self { x, y }
     }
 }
@@ -157,7 +157,7 @@ impl FromStr for Rect {
 
         let caps = re.captures(s).ok_or(ParseRectError)?;
 
-        Ok(Rect {
+        Ok(Self {
             x: caps[1].parse().or(Err(ParseRectError))?,
             y: caps[2].parse().or(Err(ParseRectError))?,
             w: caps[3].parse().or(Err(ParseRectError))?,
@@ -179,29 +179,29 @@ pub enum ConnectionStatus {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Direction {
-    NoDir = 0b00000000,
-    North = 0b00000001,
-    NorthEast = 0b00000010,
-    East = 0b00000100,
-    SouthEast = 0b00001000,
-    South = 0b00010000,
-    SouthWest = 0b00100000,
-    West = 0b01000000,
-    NorthWest = 0b10000000,
+    NoDir = 0b0000_0000,
+    North = 0b0000_0001,
+    NorthEast = 0b0000_0010,
+    East = 0b0000_0100,
+    SouthEast = 0b0000_1000,
+    South = 0b0001_0000,
+    SouthWest = 0b0010_0000,
+    West = 0b0100_0000,
+    NorthWest = 0b1000_0000,
 }
 
 impl From<u8> for Direction {
-    fn from(src: u8) -> Direction {
+    fn from(src: u8) -> Self {
         match src {
-            0b00000001 => Direction::North,
-            0b00000010 => Direction::NorthEast,
-            0b00000100 => Direction::East,
-            0b00001000 => Direction::SouthEast,
-            0b00010000 => Direction::South,
-            0b00100000 => Direction::SouthWest,
-            0b01000000 => Direction::West,
-            0b10000000 => Direction::NorthWest,
-            _ => Direction::NoDir,
+            0b0000_0001 => Self::North,
+            0b0000_0010 => Self::NorthEast,
+            0b0000_0100 => Self::East,
+            0b0000_1000 => Self::SouthEast,
+            0b0001_0000 => Self::South,
+            0b0010_0000 => Self::SouthWest,
+            0b0100_0000 => Self::West,
+            0b1000_0000 => Self::NorthWest,
+            _ => Self::NoDir,
         }
     }
 }
@@ -217,7 +217,7 @@ impl Direction {
     // constructs a direction by starting at north and rotation clockwise
     // until a desired direction is reached
     pub fn from_clock_cardinal(rot: u8) -> Self {
-        (0b00000001 << (rot * 2)).into()
+        (0b0000_0001 << (rot * 2)).into()
     }
 }
 
@@ -231,19 +231,19 @@ pub struct Tile {
 }
 
 impl Tile {
-    pub fn connect(&mut self, dir: Direction) {
+    pub const fn connect(&mut self, dir: Direction) {
         self.connections |= dir as u8;
     }
 
-    pub fn unconnect(&mut self, dir: Direction) {
+    pub const fn unconnect(&mut self, dir: Direction) {
         self.connections &= !(dir as u8);
     }
 
-    pub fn connected(self, dir: Direction) -> bool {
+    pub const fn connected(self, dir: Direction) -> bool {
         self.connections & dir as u8 != 0
     }
 
-    pub fn set_connected(&mut self, dir: Direction) {
+    pub const fn set_connected(&mut self, dir: Direction) {
         self.connections = dir as u8;
     }
 
@@ -274,11 +274,11 @@ pub struct Grid {
 }
 
 impl Grid {
-    pub fn get_index(&self, pos: Point) -> usize {
+    pub const fn get_index(&self, pos: Point) -> usize {
         pos.x as usize + pos.y as usize * self.width as usize
     }
 
-    pub fn contains(&self, pt: Point) -> bool {
+    pub const fn contains(&self, pt: Point) -> bool {
         pt.x >= 0 && (pt.x as u16) < self.width && pt.y >= 0 && (pt.y as u16) < self.height
     }
 }

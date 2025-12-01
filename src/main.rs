@@ -112,7 +112,7 @@ struct Args {
     #[arg(long = "exclude")]
     exclusions: Option<String>,
 
-    /// Comma seperated list of MazeText objects (x,y,str);(x,y,str)
+    /// Comma seperated list of `MazeText` objects (x,y,str);(x,y,str)
     #[arg(long = "text", default_value = "")]
     text: String,
 }
@@ -133,18 +133,18 @@ fn main() -> Result<(), MazeGenError> {
         Vec::new()
     };
 
-    let text: Vec<MazeText> = if !args.text.is_empty() {
+    let text: Vec<MazeText> = if args.text.is_empty() {
+        Vec::new()
+    } else {
         args.text
             .split(';')
             .map(MazeText::from_str)
             .collect::<Result<_, _>>()?
-    } else {
-        Vec::new()
     };
 
-    let seed: u64 = args.seed.unwrap_or(rand::random::<u64>());
+    let seed: u64 = args.seed.unwrap_or_else(rand::random::<u64>);
     let mut rng = SmallRng::seed_from_u64(seed);
-    println!("Seed: {}", seed);
+    println!("Seed: {seed}");
 
     let mut now = Instant::now();
     let (nodes, hist) = generate_maze(
@@ -178,18 +178,16 @@ fn main() -> Result<(), MazeGenError> {
 
     if !args.nosave {
         match args.format {
-            Some(ImageFormat::Png) => generate_png(&nodes, &opts),
+            Some(ImageFormat::Png) | None => generate_png(&nodes, &opts),
             Some(ImageFormat::Text) => generate_text(&nodes, &opts),
             Some(ImageFormat::Gif) => {
-                generate_gif(&nodes, hist.get_actions(), &rooms, &opts, &ani_opts)
+                generate_gif(&nodes, hist.get_actions(), &rooms, &opts, ani_opts)
             }
             Some(ImageFormat::CompressedGif) => {
-                generate_gif_compressed(&nodes, hist.get_actions(), &rooms, &opts, &ani_opts)
+                generate_gif_compressed(&nodes, hist.get_actions(), &rooms, &opts, ani_opts)
             }
             Some(ImageFormat::Svg) => generate_svg(&nodes, &opts),
-            // try to infer format
-            None => generate_png(&nodes, &opts),
-        }?
+        }?;
     }
     let image_time = now.elapsed();
 

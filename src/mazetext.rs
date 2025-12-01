@@ -21,7 +21,7 @@ impl Display for MazeTextError {
 pub struct MazeText<'a>(pub Point, pub &'a str);
 
 impl<'a> MazeText<'a> {
-    pub fn from_str(s: &'a str) -> Result<MazeText<'a>, MazeTextError> {
+    pub fn from_str(s: &'a str) -> Result<Self, MazeTextError> {
         let re: LazyCell<Regex> =
             LazyCell::new(|| Regex::new(r"\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(.+)\)").unwrap());
 
@@ -74,7 +74,7 @@ impl MazeFont {
             .or(Err(MazeTextError::FontFileMissing))?;
         let bytes = &buf[..info.buffer_size()];
 
-        let mut font = MazeFont {
+        let mut font = Self {
             symbols: [FontSymbol::default(); 96],
         };
 
@@ -96,8 +96,8 @@ impl MazeFont {
         Ok(font)
     }
 
-    pub fn get_symbol(&self, c: char) -> Result<FontSymbol, MazeTextError> {
-        if (c as u32) & 0b10000000 != 0 || (c as u32) < 32 {
+    pub const fn get_symbol(&self, c: char) -> Result<FontSymbol, MazeTextError> {
+        if (c as u32) & 0b1000_0000 != 0 || (c as u32) < 32 {
             Err(MazeTextError::UnsupportedSymbol)
         } else {
             Ok(self.symbols[c as usize - 32])
